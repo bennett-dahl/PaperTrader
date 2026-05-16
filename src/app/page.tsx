@@ -1,65 +1,97 @@
-import Image from "next/image";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { signIn } from "@/auth";
+import { TrendingUp, Shield, Zap, BarChart3 } from "lucide-react";
 
-export default function Home() {
+export default async function LandingPage() {
+  const session = await auth();
+
+  if (session?.user) {
+    redirect("/dashboard");
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white">
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-6 w-6 text-emerald-400" />
+          <span className="text-xl font-bold">PaperTrader</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      {/* Hero */}
+      <section className="flex flex-col items-center text-center px-6 pt-16 pb-24 max-w-2xl mx-auto">
+        <div className="inline-flex items-center gap-2 bg-emerald-400/10 text-emerald-400 text-sm font-medium px-3 py-1 rounded-full mb-6 border border-emerald-400/20">
+          <Zap className="h-3.5 w-3.5" />
+          Real market data. Zero real risk.
         </div>
-      </main>
-    </div>
+
+        <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight mb-6">
+          Learn to invest without{" "}
+          <span className="text-emerald-400">losing a cent</span>
+        </h1>
+
+        <p className="text-slate-400 text-lg mb-10 leading-relaxed">
+          PaperTrader gives you $5,000 in virtual cash to practice buying and
+          selling stocks with real market prices. Build your strategy, track your
+          portfolio, and get good before you go live.
+        </p>
+
+        <form
+          action={async () => {
+            "use server";
+            await signIn("google", { redirectTo: "/dashboard" });
+          }}
+        >
+          <Button
+            type="submit"
+            size="lg"
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold text-base px-8 py-6 h-auto rounded-xl w-full sm:w-auto"
+          >
+            Start Trading for Free →
+          </Button>
+        </form>
+
+        <p className="text-slate-500 text-sm mt-4">
+          Sign in with Google · No credit card · No real money
+        </p>
+      </section>
+
+      {/* Features */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto px-6 pb-24">
+        {[
+          {
+            icon: Shield,
+            title: "Risk-Free Practice",
+            desc: "Start with $5,000 in virtual cash. Lose it all learning — then try again. No consequences, all upside.",
+          },
+          {
+            icon: TrendingUp,
+            title: "Real Market Prices",
+            desc: "Quotes pulled from live market data via Finnhub. What you see is what the market sees.",
+          },
+          {
+            icon: BarChart3,
+            title: "Track Your Performance",
+            desc: "Watch your portfolio grow (or shrink). Charts, P&L, transaction history — the full picture.",
+          },
+        ].map(({ icon: Icon, title, desc }) => (
+          <div
+            key={title}
+            className="bg-slate-800/60 border border-slate-700 rounded-2xl p-6"
+          >
+            <Icon className="h-8 w-8 text-emerald-400 mb-4" />
+            <h3 className="font-semibold text-lg mb-2">{title}</h3>
+            <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+          </div>
+        ))}
+      </section>
+
+      <footer className="text-center text-slate-600 text-xs pb-8">
+        PaperTrader · Built for learning · Not financial advice
+      </footer>
+    </main>
   );
 }

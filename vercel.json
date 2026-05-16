@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/refresh-quotes",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/snapshot",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}
