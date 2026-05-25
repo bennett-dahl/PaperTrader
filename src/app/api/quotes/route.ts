@@ -41,14 +41,31 @@ export async function GET(req: NextRequest) {
     };
   }
 
-  // For tickers not in cache or stale, trigger a background refresh
-  const staleOrMissing = tickers.filter(
-    (t) => !result[t] || result[t].stale
-  );
+  // Separate missing tickers (not in cache at all) from stale ones
+  const missingTickers = tickers.filter((t) => !result[t]);
+  const staleTickers = tickers.filter((t) => result[t]?.stale);
 
-  if (staleOrMissing.length > 0) {
-    // Fire-and-forget refresh for stale quotes
-    refreshQuotes(staleOrMissing).catch(console.error);
+  // For missing tickers, fetch synchronously so we have data to return
+  if (missingTickers.length > 0) {
+    await refreshQuotes(missingTickers).catch(console.error);
+    const freshRows = await db
+      .select()
+      .from(cachedQuotes)
+      .where(inArray(cachedQuotes.ticker, missingTickers));
+    for (const q of freshRows) {
+      const age = now - new Date(q.updatedAt).getTime();
+      result[q.ticker] = {
+        price: parseFloat(q.price),
+        change: parseFloat(q.change),
+        changePercent: parseFloat(q.changePercent),
+        stale: age > STALE_THRESHOLD_MS,
+      };
+    }
+  }
+
+  // For stale tickers, fire-and-forget (client gets cached value immediately)
+  if (staleTickers.length > 0) {
+    refreshQuotes(staleTickers).catch(console.error);
   }
 
   return NextResponse.json({ quotes: result });
