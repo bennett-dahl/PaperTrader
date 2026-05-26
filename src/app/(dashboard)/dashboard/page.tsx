@@ -6,10 +6,15 @@ import { eq, inArray } from "drizzle-orm";
 import PortfolioCard from "@/components/PortfolioCard";
 import HoldingRow from "@/components/HoldingRow";
 import PriceChart from "@/components/PriceChart";
+import PortfolioSwitcher from "@/components/PortfolioSwitcher";
 import { portfolioSnapshots } from "@/db/schema";
 import { desc } from "drizzle-orm";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ portfolio?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.email) redirect("/");
 
@@ -21,15 +26,22 @@ export default async function DashboardPage() {
 
   if (!dbUser[0]) redirect("/");
 
-  // Get default portfolio
-  const portfolio = await db
+  // Get all portfolios for the user
+  const allPortfolios = await db
     .select()
     .from(portfolios)
-    .where(eq(portfolios.userId, dbUser[0].id))
-    .limit(1)
-    .then((rows) => rows.find((p) => p.isDefault) ?? rows[0]);
+    .where(eq(portfolios.userId, dbUser[0].id));
 
-  if (!portfolio) redirect("/onboarding");
+  if (allPortfolios.length === 0) redirect("/onboarding");
+
+  // Resolve selected portfolio from search params
+  const { portfolio: portfolioParam } = await searchParams;
+  const portfolio =
+    (portfolioParam
+      ? allPortfolios.find((p) => p.id === portfolioParam)
+      : undefined) ??
+    allPortfolios.find((p) => p.isDefault) ??
+    allPortfolios[0];
 
   // Get holdings
   const holdingsList = await db
@@ -85,7 +97,13 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold">
           Hey, {session.user.name?.split(" ")[0]} 👋
         </h1>
-        <p className="text-slate-400 text-sm mt-1">{portfolio.name}</p>
+        <div className="flex items-center gap-3 mt-2">
+          <p className="text-slate-400 text-sm">{portfolio.name}</p>
+          <PortfolioSwitcher
+            portfolios={allPortfolios.map((p) => ({ id: p.id, name: p.name }))}
+            selectedId={portfolio.id}
+          />
+        </div>
       </div>
 
       <PortfolioCard
