@@ -101,114 +101,131 @@ export async function POST(req: NextRequest) {
 
   const price = parseFloat(quote[0].price);
   const totalCost = price * shares;
-  const cashBalance = parseFloat(portfolio[0].cashBalance);
 
-  if (type === "BUY") {
-    if (totalCost > cashBalance) {
-      return NextResponse.json(
-        { error: `Insufficient cash. You need $${totalCost.toFixed(2)} but have $${cashBalance.toFixed(2)}` },
-        { status: 422 }
-      );
-    }
+  // Wrap all trade execution in a transaction to prevent race conditions
+  // (concurrent requests on the same portfolio could double-spend cash or corrupt share counts)
+  let tradeResult: { type: string; ticker: string; shares: number; pricePerShare: number; totalAmount: number };
+  try {
+    tradeResult = await db.transaction(async (tx) => {
+      // Re-read cash balance inside the transaction for consistency
+      const [currentPortfolio] = await tx
+        .select()
+        .from(portfolios)
+        .where(eq(portfolios.id, portfolioId))
+        .limit(1);
+      const cashBalance = parseFloat(currentPortfolio.cashBalance);
 
-    // Check if existing holding
-    const existing = await db
-      .select()
-      .from(holdings)
-      .where(
-        and(
-          eq(holdings.portfolioId, portfolioId),
-          eq(holdings.ticker, ticker.toUpperCase())
-        )
-      )
-      .limit(1);
+      if (type === "BUY") {
+        if (totalCost > cashBalance) {
+          throw Object.assign(
+            new Error(`Insufficient cash. You need $${totalCost.toFixed(2)} but have $${cashBalance.toFixed(2)}`),
+            { status: 422 }
+          );
+        }
 
-    if (existing[0]) {
-      // Update average cost basis
-      const existingShares = parseFloat(existing[0].shares);
-      const existingCost = parseFloat(existing[0].avgCostBasis);
-      const newShares = existingShares + shares;
-      const newAvg = (existingShares * existingCost + shares * price) / newShares;
+        // Check if existing holding
+        const existing = await tx
+          .select()
+          .from(holdings)
+          .where(
+            and(
+              eq(holdings.portfolioId, portfolioId),
+              eq(holdings.ticker, ticker.toUpperCase())
+            )
+          )
+          .limit(1);
 
-      await db
-        .update(holdings)
-        .set({ shares: String(newShares), avgCostBasis: String(newAvg) })
-        .where(eq(holdings.id, existing[0].id));
-    } else {
-      await db.insert(holdings).values({
+        if (existing[0]) {
+          // Update average cost basis
+          const existingShares = parseFloat(existing[0].shares);
+          const existingCost = parseFloat(existing[0].avgCostBasis);
+          const newShares = existingShares + shares;
+          const newAvg = (existingShares * existingCost + shares * price) / newShares;
+
+          await tx
+            .update(holdings)
+            .set({ shares: String(newShares), avgCostBasis: String(newAvg) })
+            .where(eq(holdings.id, existing[0].id));
+        } else {
+          await tx.insert(holdings).values({
+            portfolioId,
+            ticker: ticker.toUpperCase(),
+            shares: String(shares),
+            avgCostBasis: String(price),
+          });
+        }
+
+        // Deduct cash
+        await tx
+          .update(portfolios)
+          .set({ cashBalance: String(cashBalance - totalCost) })
+          .where(eq(portfolios.id, portfolioId));
+      } else {
+        // SELL
+        const existing = await tx
+          .select()
+          .from(holdings)
+          .where(
+            and(
+              eq(holdings.portfolioId, portfolioId),
+              eq(holdings.ticker, ticker.toUpperCase())
+            )
+          )
+          .limit(1);
+
+        if (!existing[0]) {
+          throw Object.assign(new Error("You don't hold this stock"), { status: 422 });
+        }
+
+        const existingShares = parseFloat(existing[0].shares);
+        if (shares > existingShares) {
+          throw Object.assign(
+            new Error(`You only have ${existingShares.toFixed(4)} shares to sell`),
+            { status: 422 }
+          );
+        }
+
+        const newShares = existingShares - shares;
+        if (newShares < 0.0001) {
+          // Remove holding entirely
+          await tx.delete(holdings).where(eq(holdings.id, existing[0].id));
+        } else {
+          await tx
+            .update(holdings)
+            .set({ shares: String(newShares) })
+            .where(eq(holdings.id, existing[0].id));
+        }
+
+        // Add cash
+        await tx
+          .update(portfolios)
+          .set({ cashBalance: String(cashBalance + totalCost) })
+          .where(eq(portfolios.id, portfolioId));
+      }
+
+      // Record transaction
+      await tx.insert(transactions).values({
         portfolioId,
         ticker: ticker.toUpperCase(),
+        type,
         shares: String(shares),
-        avgCostBasis: String(price),
+        pricePerShare: String(price),
+        totalAmount: String(totalCost),
       });
-    }
 
-    // Deduct cash
-    await db
-      .update(portfolios)
-      .set({ cashBalance: String(cashBalance - totalCost) })
-      .where(eq(portfolios.id, portfolioId));
-  } else {
-    // SELL
-    const existing = await db
-      .select()
-      .from(holdings)
-      .where(
-        and(
-          eq(holdings.portfolioId, portfolioId),
-          eq(holdings.ticker, ticker.toUpperCase())
-        )
-      )
-      .limit(1);
-
-    if (!existing[0]) {
-      return NextResponse.json({ error: "You don't hold this stock" }, { status: 422 });
-    }
-
-    const existingShares = parseFloat(existing[0].shares);
-    if (shares > existingShares) {
-      return NextResponse.json(
-        { error: `You only have ${existingShares.toFixed(4)} shares to sell` },
-        { status: 422 }
-      );
-    }
-
-    const newShares = existingShares - shares;
-    if (newShares < 0.0001) {
-      // Remove holding entirely
-      await db.delete(holdings).where(eq(holdings.id, existing[0].id));
-    } else {
-      await db
-        .update(holdings)
-        .set({ shares: String(newShares) })
-        .where(eq(holdings.id, existing[0].id));
-    }
-
-    // Add cash
-    await db
-      .update(portfolios)
-      .set({ cashBalance: String(cashBalance + totalCost) })
-      .where(eq(portfolios.id, portfolioId));
+      return {
+        type,
+        ticker: ticker.toUpperCase(),
+        shares,
+        pricePerShare: price,
+        totalAmount: totalCost,
+      };
+    });
+  } catch (err: unknown) {
+    const status = (err as { status?: number }).status ?? 500;
+    const message = err instanceof Error ? err.message : "Trade failed";
+    return NextResponse.json({ error: message }, { status });
   }
 
-  // Record transaction
-  await db.insert(transactions).values({
-    portfolioId,
-    ticker: ticker.toUpperCase(),
-    type,
-    shares: String(shares),
-    pricePerShare: String(price),
-    totalAmount: String(totalCost),
-  });
-
-  return NextResponse.json({
-    success: true,
-    trade: {
-      type,
-      ticker: ticker.toUpperCase(),
-      shares,
-      pricePerShare: price,
-      totalAmount: totalCost,
-    },
-  });
+  return NextResponse.json({ success: true, trade: tradeResult });
 }
