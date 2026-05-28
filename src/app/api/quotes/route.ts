@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { cachedQuotes } from "@/db/schema";
 import { inArray } from "drizzle-orm";
@@ -7,10 +8,15 @@ import { getFinnhubClient, fetchQuote } from "@/lib/finnhub";
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const tickerParam = searchParams.get("tickers");
 
-  if (!tickerParam) {
+  if (tickerParam === null) {
     return NextResponse.json({ error: "Missing tickers param" }, { status: 400 });
   }
 
