@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, TrendingUp, Eye, Clock } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Eye, Clock, Wand2 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/trade", label: "Trade", icon: TrendingUp },
+  { href: "/build", label: "Build", icon: Wand2 },
   { href: "/watchlist", label: "Watchlist", icon: Eye },
   { href: "/history", label: "History", icon: Clock },
 ];
@@ -23,7 +24,7 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center gap-1 px-4 py-3 min-w-[44px] min-h-[44px] transition-colors ${
+              className={`flex flex-col items-center gap-1 px-3 py-3 min-w-[44px] min-h-[44px] transition-colors ${
                 active ? "text-emerald-400" : "text-slate-500"
               }`}
             >

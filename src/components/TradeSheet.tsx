@@ -12,12 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useActivePortfolio } from "@/contexts/ActivePortfolioContext";
 
 interface TradeSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ticker: string;
   companyName: string;
+  /** If omitted, falls back to context activePortfolioId */
+  portfolioId?: string;
 }
 
 export default function TradeSheet({
@@ -25,7 +28,11 @@ export default function TradeSheet({
   onOpenChange,
   ticker,
   companyName,
+  portfolioId: portfolioIdProp,
 }: TradeSheetProps) {
+  const { activePortfolioId } = useActivePortfolio();
+  const portfolioId = portfolioIdProp ?? activePortfolioId;
+
   const [tradeType, setTradeType] = useState<"BUY" | "SELL">("BUY");
   const [shares, setShares] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,20 +63,13 @@ export default function TradeSheet({
       return;
     }
 
+    if (!portfolioId) {
+      toast.error("No active portfolio found");
+      return;
+    }
+
     setLoading(true);
     try {
-      // Get active portfolio ID from API
-      const portfolioRes = await fetch("/api/portfolio");
-      const portfolioData = await portfolioRes.json();
-      const activePortfolio =
-        portfolioData.portfolios?.find((p: { isDefault: boolean }) => p.isDefault) ??
-        portfolioData.portfolios?.[0];
-
-      if (!activePortfolio) {
-        toast.error("No active portfolio found");
-        return;
-      }
-
       const res = await fetch("/api/trade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,7 +77,7 @@ export default function TradeSheet({
           ticker,
           type: tradeType,
           shares: sharesNum,
-          portfolioId: activePortfolio.id,
+          portfolioId,
         }),
       });
 
