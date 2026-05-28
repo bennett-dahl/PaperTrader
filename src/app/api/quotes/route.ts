@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     .where(inArray(cachedQuotes.ticker, tickers));
 
   const now = Date.now();
-  const result: Record<string, { price: number; change: number; changePercent: number; stale: boolean }> = {};
+  const result: Record<string, { price: number; change: number; changePercent: number; name: string | null; stale: boolean }> = {};
 
   for (const q of cached) {
     const age = now - new Date(q.updatedAt).getTime();
@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
       price: parseFloat(q.price),
       change: parseFloat(q.change),
       changePercent: parseFloat(q.changePercent),
+      name: q.name ?? null,
       stale: age > STALE_THRESHOLD_MS,
     };
   }
@@ -64,6 +65,7 @@ export async function GET(req: NextRequest) {
         price: parseFloat(q.price),
         change: parseFloat(q.change),
         changePercent: parseFloat(q.changePercent),
+        name: q.name ?? null,
         stale: age > STALE_THRESHOLD_MS,
       };
     }

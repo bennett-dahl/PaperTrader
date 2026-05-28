@@ -3,12 +3,12 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { portfolios, holdings, users, cachedQuotes } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import PortfolioCard from "@/components/PortfolioCard";
-import HoldingRow from "@/components/HoldingRow";
 import PriceChart from "@/components/PriceChart";
 import PortfolioSwitcher from "@/components/PortfolioSwitcher";
+import LivePortfolioDashboard from "@/components/LivePortfolioDashboard";
 import { portfolioSnapshots } from "@/db/schema";
 import { desc } from "drizzle-orm";
+import { HoldingWithPrice } from "@/types";
 
 export default async function DashboardPage({
   searchParams,
@@ -61,17 +61,26 @@ export default async function DashboardPage({
 
   const quoteMap = Object.fromEntries(quotes.map((q) => [q.ticker, q]));
 
-  // Calculate portfolio market value
-  const holdingsValue = holdingsList.reduce((sum, h) => {
+  // Build initialHoldings with SSR-hydrated prices
+  const initialHoldings: HoldingWithPrice[] = holdingsList.map((h) => {
     const quote = quoteMap[h.ticker];
-    const price = quote ? parseFloat(quote.price) : parseFloat(h.avgCostBasis);
-    return sum + parseFloat(h.shares) * price;
-  }, 0);
+    return {
+      ticker: h.ticker,
+      name: quote?.name ?? "",
+      shares: parseFloat(h.shares),
+      avgCostBasis: parseFloat(h.avgCostBasis),
+      currentPrice: quote ? parseFloat(quote.price) : undefined,
+      change: quote ? parseFloat(quote.change) : undefined,
+      changePercent: quote ? parseFloat(quote.changePercent) : undefined,
+    };
+  });
 
-  const totalValue = parseFloat(portfolio.cashBalance) + holdingsValue;
-  const totalReturn = totalValue - parseFloat(portfolio.startingBalance);
-  const totalReturnPct =
-    (totalReturn / parseFloat(portfolio.startingBalance)) * 100;
+  const initialCashBalance = parseFloat(portfolio.cashBalance);
+  const holdingsValue = initialHoldings.reduce((sum, h) => {
+    const price = h.currentPrice ?? h.avgCostBasis;
+    return sum + h.shares * price;
+  }, 0);
+  const initialTotalValue = initialCashBalance + holdingsValue;
 
   // Get snapshots for chart
   const snapshots = await db
@@ -106,12 +115,12 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <PortfolioCard
-        totalValue={totalValue}
-        cashBalance={parseFloat(portfolio.cashBalance)}
-        holdingsValue={holdingsValue}
-        totalReturn={totalReturn}
-        totalReturnPct={totalReturnPct}
+      <LivePortfolioDashboard
+        portfolioId={portfolio.id}
+        initialHoldings={initialHoldings}
+        initialCashBalance={initialCashBalance}
+        initialTotalValue={initialTotalValue}
+        startingBalance={parseFloat(portfolio.startingBalance)}
       />
 
       {chartData.length > 1 && (
@@ -122,34 +131,6 @@ export default async function DashboardPage({
           <PriceChart data={chartData} />
         </div>
       )}
-
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Holdings</h2>
-        {holdingsList.length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
-            <p className="text-slate-400 mb-1">No holdings yet</p>
-            <p className="text-slate-500 text-sm">
-              Head to Trade to make your first buy
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {holdingsList.map((holding) => (
-              <HoldingRow
-                key={holding.id}
-                ticker={holding.ticker}
-                name={quoteMap[holding.ticker]?.name ?? undefined}
-                shares={parseFloat(holding.shares)}
-                avgCostBasis={parseFloat(holding.avgCostBasis)}
-                portfolioId={portfolio.id}
-                currentPrice={quoteMap[holding.ticker] ? parseFloat(quoteMap[holding.ticker].price) : undefined}
-                change={quoteMap[holding.ticker] ? parseFloat(quoteMap[holding.ticker].change) : undefined}
-                changePercent={quoteMap[holding.ticker] ? parseFloat(quoteMap[holding.ticker].changePercent) : undefined}
-              />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
