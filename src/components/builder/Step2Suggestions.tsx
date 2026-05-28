@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, RefreshCw, ChevronRight, Loader2, ArrowLeftRight, TrendingUp } from "lucide-react";
+import { ArrowLeft, RefreshCw, ChevronRight, Loader2, ArrowLeftRight } from "lucide-react";
+import { StockDetailSheet } from "@/components/stock-detail/StockDetailSheet";
 import type { SuggestionItem, BuildConfig } from "./PortfolioBuilderWizard";
 
 interface Step2SuggestionsProps {
@@ -18,6 +19,11 @@ export default function Step2Suggestions({ config, onBack, onConfirm }: Step2Sug
   const [loading, setLoading] = useState(true);
   const [swappingTicker, setSwappingTicker] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // StockDetail state for builder context
+  const [detailTicker, setDetailTicker] = useState<string | null>(null);
+  const [detailName, setDetailName] = useState<string | null>(null);
+  const [detailSlotIndex, setDetailSlotIndex] = useState<number>(-1);
 
   const fetchSuggestions = useCallback(async () => {
     setLoading(true);
@@ -85,6 +91,26 @@ export default function Step2Suggestions({ config, onBack, onConfirm }: Step2Sug
     } finally {
       setSwappingTicker(null);
     }
+  };
+
+  // Open StockDetail in builder context for a suggestion slot
+  const handleViewDetail = (item: SuggestionItem, slotIndex: number) => {
+    setDetailTicker(item.ticker);
+    setDetailName(item.name);
+    setDetailSlotIndex(slotIndex);
+  };
+
+  // Called when user confirms "Swap In" from StockDetail
+  const handleSwapIn = (newTicker: string) => {
+    // Replace the suggestion at detailSlotIndex with the new ticker
+    // For now, trigger a swap via the API using the new ticker
+    setSuggestions((prev) =>
+      prev.map((s, i) =>
+        i === detailSlotIndex ? { ...s, ticker: newTicker } : s
+      )
+    );
+    setDetailTicker(null);
+    toast.success(`Swapped in ${newTicker}`);
   };
 
   const totalAllocated = suggestions.reduce((sum, s) => sum + s.allocatedAmount, 0);
@@ -179,12 +205,13 @@ export default function Step2Suggestions({ config, onBack, onConfirm }: Step2Sug
               </Button>
             </div>
           ) : (
-            suggestions.map((s) => (
+            suggestions.map((s, i) => (
               <SuggestionCard
                 key={s.ticker}
                 item={s}
                 isSwapping={swappingTicker === s.ticker}
                 onSwap={() => handleSwap(s.ticker)}
+                onViewDetail={() => handleViewDetail(s, i)}
               />
             ))
           )}
@@ -207,6 +234,19 @@ export default function Step2Suggestions({ config, onBack, onConfirm }: Step2Sug
           </Button>
         </div>
       )}
+
+      {/* StockDetail in builder context */}
+      {detailTicker && (
+        <StockDetailSheet
+          open={!!detailTicker}
+          onClose={() => setDetailTicker(null)}
+          ticker={detailTicker}
+          stockName={detailName ?? undefined}
+          context="builder"
+          builderSlotIndex={detailSlotIndex}
+          onSwapIn={handleSwapIn}
+        />
+      )}
     </div>
   );
 }
@@ -215,10 +255,12 @@ function SuggestionCard({
   item,
   isSwapping,
   onSwap,
+  onViewDetail,
 }: {
   item: SuggestionItem;
   isSwapping: boolean;
   onSwap: () => void;
+  onViewDetail: () => void;
 }) {
   const riskColor = {
     low: "text-emerald-400",
@@ -227,7 +269,10 @@ function SuggestionCard({
   }[item.riskLevel] ?? "text-slate-400";
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-4">
+    <div
+      className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-4 cursor-pointer hover:border-slate-700 transition-colors"
+      onClick={onViewDetail}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -254,7 +299,10 @@ function SuggestionCard({
           {item.riskLevel} risk · {item.marketCap}-cap
         </span>
         <button
-          onClick={onSwap}
+          onClick={(e) => {
+            e.stopPropagation(); // prevent opening detail sheet
+            onSwap();
+          }}
           disabled={isSwapping}
           className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-medium transition-colors disabled:opacity-50 min-h-[32px] px-2 py-1 rounded-lg hover:bg-slate-800"
         >

@@ -3,22 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import StockSearch from "@/components/StockSearch";
-import TradeSheet from "@/components/TradeSheet";
+import { StockDetailSheet } from "@/components/stock-detail/StockDetailSheet";
 import { Wand2 } from "lucide-react";
 
 interface SelectedStock {
   ticker: string;
   name: string;
-  price?: number;
 }
 
 export default function TradePage() {
   const [selectedStock, setSelectedStock] = useState<SelectedStock | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
 
   const handleSelectStock = (stock: SelectedStock) => {
     setSelectedStock(stock);
-    setSheetOpen(true);
   };
 
   return (
@@ -78,11 +75,12 @@ export default function TradePage() {
       </div>
 
       {selectedStock && (
-        <TradeSheet
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
+        <StockDetailSheet
+          open={!!selectedStock}
+          onClose={() => setSelectedStock(null)}
           ticker={selectedStock.ticker}
-          companyName={selectedStock.name}
+          stockName={selectedStock.name}
+          context="search"
         />
       )}
     </div>

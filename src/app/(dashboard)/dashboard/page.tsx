@@ -137,8 +137,14 @@ export default async function DashboardPage({
             {holdingsList.map((holding) => (
               <HoldingRow
                 key={holding.id}
-                holding={holding}
-                quote={quoteMap[holding.ticker]}
+                ticker={holding.ticker}
+                name={quoteMap[holding.ticker]?.name ?? undefined}
+                shares={parseFloat(holding.shares)}
+                avgCostBasis={parseFloat(holding.avgCostBasis)}
+                portfolioId={portfolio.id}
+                currentPrice={quoteMap[holding.ticker] ? parseFloat(quoteMap[holding.ticker].price) : undefined}
+                change={quoteMap[holding.ticker] ? parseFloat(quoteMap[holding.ticker].change) : undefined}
+                changePercent={quoteMap[holding.ticker] ? parseFloat(quoteMap[holding.ticker].changePercent) : undefined}
               />
             ))}
           </div>
