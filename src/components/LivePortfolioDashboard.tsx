@@ -73,7 +73,7 @@ export default function LivePortfolioDashboard({
   const totalReturn = totalValue - startingBalance;
   const totalReturnPct = startingBalance > 0 ? (totalReturn / startingBalance) * 100 : 0;
 
-  const refreshQuotes = useCallback(async (currentHoldings: HoldingWithPrice[]) => {
+  const refreshQuotes = useCallback(async (currentHoldings: HoldingWithPrice[], force = false) => {
     if (currentHoldings.length === 0) return;
     if (!mountedRef.current) return;
 
@@ -93,7 +93,8 @@ export default function LivePortfolioDashboard({
         await new Promise((res) => setTimeout(res, BATCH_STAGGER_MS));
       }
       try {
-        const res = await fetch(`/api/quotes?tickers=${batches[i].join(",")}`);
+        const forceParam = force ? "&force=true" : "";
+        const res = await fetch(`/api/quotes?tickers=${batches[i].join(",")}${forceParam}`);
         if (!res.ok) continue;
         const data = await res.json();
         Object.assign(merged, data.quotes ?? {});
@@ -127,10 +128,10 @@ export default function LivePortfolioDashboard({
     fetchHoldings();
   }, [portfolioId]);
 
-  // Auto-refresh quotes: immediate on mount + every 5 min
+  // Auto-refresh quotes: immediate on mount (force=true for fresh prices) + every 5 min
   useEffect(() => {
     mountedRef.current = true;
-    refreshQuotes(holdings);
+    refreshQuotes(holdings, true);
     const id = setInterval(() => {
       refreshQuotes(holdings);
     }, REFRESH_INTERVAL_MS);

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Select,
@@ -25,13 +26,37 @@ export default function PortfolioSwitcher({
 }: PortfolioSwitcherProps) {
   const router = useRouter();
 
-  if (portfolios.length <= 1) return null;
+  if (portfolios.length === 0) {
+    return (
+      <Link
+        href="/build"
+        className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+      >
+        Create your first portfolio →
+      </Link>
+    );
+  }
+
+  if (portfolios.length === 1) {
+    return (
+      <Link
+        href="/build"
+        className="text-xs text-slate-500 hover:text-slate-400 transition-colors"
+      >
+        ＋ New Portfolio
+      </Link>
+    );
+  }
 
   return (
     <Select
       value={selectedId}
       onValueChange={(value) => {
-        router.push(`?portfolio=${value}`);
+        if (value === "__new__") {
+          router.push("/build");
+        } else {
+          router.push(`?portfolio=${value}`);
+        }
       }}
     >
       <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200 text-sm h-8 w-auto">
@@ -43,6 +68,9 @@ export default function PortfolioSwitcher({
             {p.name}
           </SelectItem>
         ))}
+        <SelectItem value="__new__" className="text-slate-400 border-t border-slate-700 mt-1 pt-1">
+          ＋ New Portfolio
+        </SelectItem>
       </SelectContent>
     </Select>
   );

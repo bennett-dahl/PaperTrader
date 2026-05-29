@@ -36,6 +36,7 @@ function CustomTooltip({ active, payload }: any) {
 export default function PriceChart({ data }: PriceChartProps) {
   const min = Math.min(...data.map((d) => d.value));
   const max = Math.max(...data.map((d) => d.value));
+  const padding = (max - min) * 0.05;
   const isUp = data[data.length - 1]?.value >= data[0]?.value;
 
   return (
@@ -49,8 +50,14 @@ export default function PriceChart({ data }: PriceChartProps) {
           interval="preserveStartEnd"
         />
         <YAxis
-          domain={[min * 0.999, max * 1.001]}
-          hide
+          domain={[min - padding, max + padding]}
+          ticks={[min, max]}
+          orientation="right"
+          width={60}
+          tick={{ fill: "#64748b", fontSize: 10 }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(v: number) => `$${v.toFixed(2)}`}
         />
         <Tooltip content={<CustomTooltip />} />
         <Line

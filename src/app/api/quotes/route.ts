@@ -71,9 +71,29 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // For stale tickers, fire-and-forget (client gets cached value immediately)
+  // If force=true, await stale tickers synchronously so client gets fresh prices
+  const force = searchParams.get("force") === "true";
   if (staleTickers.length > 0) {
-    refreshQuotes(staleTickers).catch(console.error);
+    if (force) {
+      await refreshQuotes(staleTickers).catch(console.error);
+      const freshRows = await db
+        .select()
+        .from(cachedQuotes)
+        .where(inArray(cachedQuotes.ticker, staleTickers));
+      for (const q of freshRows) {
+        const age = now - new Date(q.updatedAt).getTime();
+        result[q.ticker] = {
+          price: parseFloat(q.price),
+          change: parseFloat(q.change),
+          changePercent: parseFloat(q.changePercent),
+          name: q.name ?? null,
+          stale: age > STALE_THRESHOLD_MS,
+        };
+      }
+    } else {
+      // Fire-and-forget: client gets cached value immediately
+      refreshQuotes(staleTickers).catch(console.error);
+    }
   }
 
   return NextResponse.json({ quotes: result });
