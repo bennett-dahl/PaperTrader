@@ -5,7 +5,7 @@ import { users, portfolios } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import PortfolioBuilderWizard from "@/components/builder/PortfolioBuilderWizard";
 
-export default async function BuildPage() {
+export default async function AdvisorPage() {
   const session = await auth();
   if (!session?.user?.email) redirect("/");
 

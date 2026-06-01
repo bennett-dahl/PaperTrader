@@ -29,7 +29,7 @@ export default function PortfolioSwitcher({
   if (portfolios.length === 0) {
     return (
       <Link
-        href="/build"
+        href="/portfolios"
         className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
       >
         Create your first portfolio →
@@ -40,7 +40,7 @@ export default function PortfolioSwitcher({
   if (portfolios.length === 1) {
     return (
       <Link
-        href="/build"
+        href="/portfolios"
         className="text-xs text-slate-500 hover:text-slate-400 transition-colors"
       >
         ＋ New Portfolio
@@ -53,7 +53,7 @@ export default function PortfolioSwitcher({
       value={selectedId}
       onValueChange={(value) => {
         if (value === "__new__") {
-          router.push("/build");
+          router.push("/portfolios");
         } else {
           router.push(`?portfolio=${value}`);
         }

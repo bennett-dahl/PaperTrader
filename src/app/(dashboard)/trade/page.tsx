@@ -31,16 +31,16 @@ export default function TradePage() {
 
       {/* Portfolio Builder CTA */}
       <Link
-        href="/build"
+        href="/advisor"
         className="flex items-center justify-between bg-gradient-to-r from-emerald-500/10 to-emerald-400/5 border border-emerald-500/30 rounded-2xl px-5 py-4 hover:border-emerald-400/50 transition-colors group"
       >
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Wand2 className="h-4 w-4 text-emerald-400" />
-            <p className="font-semibold text-sm text-emerald-300">Build a Portfolio</p>
+            <p className="font-semibold text-sm text-emerald-300">Stock Advisor</p>
           </div>
           <p className="text-slate-400 text-xs">
-            Let us pick a diversified mix of stocks for you in 3 easy steps
+            Get personalized stock picks for your portfolio in 3 easy steps
           </p>
         </div>
         <div className="text-emerald-400 text-xl group-hover:translate-x-1 transition-transform">→</div>

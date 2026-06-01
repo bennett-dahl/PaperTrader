@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { portfolios, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import BottomNav from "@/components/BottomNav";
+import MobileNav from "@/components/MobileNav";
 import Sidebar from "@/components/Sidebar";
 import { TrendingUp } from "lucide-react";
 import { ActivePortfolioProvider } from "@/contexts/ActivePortfolioContext";
@@ -43,7 +43,7 @@ export default async function DashboardLayout({
         <Sidebar user={session.user} />
 
         {/* Main content */}
-        <main className="flex-1 pb-20 sm:pb-0 sm:pl-64 min-h-screen">
+        <main className="flex-1 pb-4 sm:pb-0 sm:pl-64 min-h-screen">
           {/* Mobile header */}
           <header className="flex items-center justify-between px-4 py-3 border-b border-slate-800 sm:hidden sticky top-0 bg-slate-950/95 backdrop-blur z-10">
             <div className="flex items-center gap-2">
@@ -59,14 +59,13 @@ export default async function DashboardLayout({
                   className="h-8 w-8 rounded-full"
                 />
               )}
+              <MobileNav user={session.user} />
             </div>
           </header>
 
           <div className="p-4 sm:p-8">{children}</div>
         </main>
 
-        {/* Mobile bottom nav */}
-        <BottomNav />
       </div>
     </ActivePortfolioProvider>
   );

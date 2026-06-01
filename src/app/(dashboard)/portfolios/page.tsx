@@ -5,6 +5,7 @@ import { portfolios, users, holdings, cachedQuotes } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import CreatePortfolioButton from "@/components/CreatePortfolioButton";
+import PortfolioActions from "@/components/PortfolioActions";
 
 export default async function PortfoliosPage() {
   const session = await auth();
@@ -94,6 +95,14 @@ export default async function PortfoliosPage() {
                 {p.pct.toFixed(2)}% all time
               </span>
             </div>
+            {/* Portfolio actions */}
+            <PortfolioActions
+              portfolioId={p.id}
+              portfolioName={p.name}
+              cashBalance={parseFloat(p.cashBalance)}
+              holdingsCount={p.holdingsCount}
+              isDefault={p.isDefault}
+            />
           </div>
         ))}
       </div>
