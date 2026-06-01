@@ -34,9 +34,15 @@ export async function PATCH(
   if (portfolio[0].userId !== dbUser[0].id)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const updates: Partial<{ name: string; cashBalance: string }> = {};
+  const updates: Partial<{ name: string; cashBalance: string; startingBalance: string }> = {};
   if (name !== undefined) updates.name = name.trim();
-  if (cashBalance !== undefined) updates.cashBalance = cashBalance.toFixed(2);
+  if (cashBalance !== undefined) {
+    const currentCash = parseFloat(portfolio[0].cashBalance);
+    const delta = cashBalance - currentCash;
+    const newStartingBalance = parseFloat(portfolio[0].startingBalance) + delta;
+    updates.cashBalance = cashBalance.toFixed(2);
+    updates.startingBalance = newStartingBalance.toFixed(2);
+  }
 
   const updated = await db
     .update(portfolios)
