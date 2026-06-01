@@ -142,7 +142,7 @@ export default function Step1Config({ portfolios, initialConfig, onSubmit }: Ste
           <label className="text-slate-400 text-sm mb-1.5 block">Portfolio</label>
           <Select value={portfolioId} onValueChange={(v) => { if (v) setPortfolioId(v); }}>
             <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
-              <SelectValue />
+              <SelectValue>{portfolios.find((p) => p.id === portfolioId)?.name ?? "Portfolio"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {portfolios.map((p) => (

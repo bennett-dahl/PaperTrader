@@ -60,7 +60,7 @@ export default function PortfolioSwitcher({
       }}
     >
       <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200 text-sm h-8 w-auto">
-        <SelectValue />
+        <SelectValue>{portfolios.find((p) => p.id === selectedId)?.name ?? "Portfolio"}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {portfolios.map((p) => (
