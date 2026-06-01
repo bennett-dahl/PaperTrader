@@ -104,6 +104,53 @@ describe("POST /api/watchlist", () => {
       },
     });
   });
+  it("returns 404 when user not found", async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) }),
+      }),
+    } as any);
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticker: "AAPL", portfolioId: "p1" }),
+        });
+        expect(res.status).toBe(404);
+      },
+    });
+  });
+
+  it("returns 404 when portfolio not found", async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    let count = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            count++;
+            if (count === 1) return [mockUser];
+            return [];
+          }),
+        }),
+      }),
+    } as any));
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticker: "AAPL", portfolioId: "p1" }),
+        });
+        expect(res.status).toBe(404);
+      },
+    });
+  });
+
 });
 
 describe("DELETE /api/watchlist", () => {

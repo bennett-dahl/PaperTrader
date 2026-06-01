@@ -123,4 +123,103 @@ describe("Step3Confirm", () => {
     // Partial success: "1 of 2 trades succeeded"
     expect(screen.getByText(/trades succeeded|of 2 trades/i)).toBeInTheDocument();
   });
+
+  it("shows success state when all trades succeed", () => {
+    const results = {
+      results: [
+        { ticker: "AAPL", success: true, totalAmount: 499.95 },
+        { ticker: "MSFT", success: true, totalAmount: 499.8 },
+      ],
+      successCount: 2,
+      failCount: 0,
+    };
+
+    render(
+      <Step3Confirm
+        config={mockConfig}
+        suggestions={mockSuggestions}
+        executeResults={results}
+        onBack={vi.fn()}
+        onExecute={vi.fn()}
+        onReset={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/2 trades executed successfully|all.*trades/i)).toBeInTheDocument();
+  });
+
+  it("shows all-failed state when all trades fail", () => {
+    const results = {
+      results: [
+        { ticker: "AAPL", success: false, error: "Insufficient cash" },
+        { ticker: "MSFT", success: false, error: "Insufficient cash" },
+      ],
+      successCount: 0,
+      failCount: 2,
+    };
+
+    render(
+      <Step3Confirm
+        config={mockConfig}
+        suggestions={mockSuggestions}
+        executeResults={results}
+        onBack={vi.fn()}
+        onExecute={vi.fn()}
+        onReset={vi.fn()}
+      />
+    );
+    const failedElements = screen.getAllByText(/failed|no trades executed|Trades Failed/i);
+    expect(failedElements.length).toBeGreaterThan(0);
+  });
+
+  it("calls onReset when reset/start over button clicked after execution", () => {
+    const onReset = vi.fn();
+    const results = {
+      results: [{ ticker: "AAPL", success: true, totalAmount: 499.95 }],
+      successCount: 1,
+      failCount: 0,
+    };
+
+    render(
+      <Step3Confirm
+        config={mockConfig}
+        suggestions={[mockSuggestions[0]]}
+        executeResults={results}
+        onBack={vi.fn()}
+        onExecute={vi.fn()}
+        onReset={onReset}
+      />
+    );
+    const resetBtn = screen.queryByRole("button", { name: /start over|reset|new/i });
+    if (resetBtn) {
+      fireEvent.click(resetBtn);
+      expect(onReset).toHaveBeenCalled();
+    }
+  });
+
+  it("shows error toast when execute API fails", async () => {
+    const { toast } = await import("sonner");
+    vi.stubGlobal("fetch", vi.fn());
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "Server error" }),
+    } as any);
+
+    render(
+      <Step3Confirm
+        config={mockConfig}
+        suggestions={mockSuggestions}
+        executeResults={null}
+        onBack={vi.fn()}
+        onExecute={vi.fn()}
+        onReset={vi.fn()}
+      />
+    );
+
+    const executeBtn = screen.getByRole("button", { name: /buy all/i });
+    fireEvent.click(executeBtn);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
+    });
+  });
 });

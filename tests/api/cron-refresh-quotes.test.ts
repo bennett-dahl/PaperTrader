@@ -78,4 +78,35 @@ describe("GET /api/cron/refresh-quotes", () => {
       },
     });
   });
+
+  it("handles failed quote fetches (reports in failed count)", async () => {
+    vi.mocked(db.selectDistinct)
+      .mockReturnValueOnce({ from: vi.fn().mockResolvedValue([{ ticker: "AAPL" }, { ticker: "TSLA" }]) } as any)
+      .mockReturnValueOnce({ from: vi.fn().mockResolvedValue([]) } as any);
+
+    vi.mocked(fetchQuote)
+      .mockResolvedValueOnce({ c: 175, d: 2, dp: 1.1 }) // AAPL succeeds
+      .mockRejectedValueOnce(new Error("Rate limited")); // TSLA fails
+
+    vi.mocked(db.insert).mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      }),
+    } as any);
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "GET",
+          headers: { authorization: "Bearer test-secret" },
+        });
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.refreshed).toBe(1);
+        expect(json.failed).toBe(1);
+      },
+    });
+  });
+
 });

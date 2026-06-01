@@ -225,7 +225,6 @@ describe("POST /api/trade", () => {
       },
     });
   });
-});
 
   it("returns 400 when type is missing", async () => {
     setupAuth();
@@ -562,6 +561,196 @@ describe("POST /api/trade", () => {
           body: JSON.stringify(validBody),
         });
         expect([200, 422]).toContain(res.status);
+      },
+    });
+  });
+});
+
+  it("handles Finnhub fetch error gracefully (logs but continues)", async () => {
+    setupAuth();
+    const { fetchQuote, getFinnhubClient } = await import("@/lib/finnhub");
+    vi.mocked(getFinnhubClient).mockImplementation(() => { throw new Error("Finnhub unavailable"); });
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [{ ...mockPortfolio, cashBalance: "5000.00" }];
+            return []; // no cached quote
+          }),
+        }),
+      }),
+    } as any));
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validBody),
+        });
+        // Should get 422 because quote lookup failed
+        expect(res.status).toBe(422);
+      },
+    });
+    vi.mocked(getFinnhubClient).mockReturnValue({});
+  });
+
+  it("SELL: updates existing holding shares when remaining > 0.0001", async () => {
+    setupAuth();
+    const cachedQuote = { ticker: "AAPL", price: "150.00", change: "1.00", changePercent: "0.67" };
+    const portfolioWithCash = { ...mockPortfolio, cashBalance: "1000.00" };
+    const existingHolding = { id: "h1", portfolioId: mockPortfolio.id, ticker: "AAPL", shares: "5.0000", avgCostBasis: "140.00" };
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [portfolioWithCash];
+            return [cachedQuote];
+          }),
+        }),
+      }),
+    } as any));
+
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      let txCount = 0;
+      const txMock = {
+        select: vi.fn().mockImplementation(() => ({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockImplementation(async () => {
+                txCount++;
+                if (txCount === 1) return [portfolioWithCash];
+                return [existingHolding]; // has 5 shares, selling 1
+              }),
+            }),
+          }),
+        })),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{}]) }),
+        update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }) }),
+        delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }),
+      };
+      return fn(txMock);
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...validBody, type: "SELL", shares: 1 }), // sell 1 of 5 → 4 remaining (> 0.0001)
+        });
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.success).toBe(true);
+      },
+    });
+  });
+
+  it("handles non-Error exception in transaction (defaults to 'Trade failed')", async () => {
+    setupAuth();
+    const cachedQuote = { ticker: "AAPL", price: "150.00", change: "1.00", changePercent: "0.67" };
+    const portfolioWithCash = { ...mockPortfolio, cashBalance: "5000.00" };
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [portfolioWithCash];
+            return [cachedQuote];
+          }),
+        }),
+      }),
+    } as any));
+
+    // Throw a non-Error (string) from transaction
+    vi.mocked(db.transaction).mockRejectedValue("string error");
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validBody),
+        });
+        expect(res.status).toBe(500);
+        const json = await res.json();
+        expect(json.error).toBe("Trade failed");
+      },
+    });
+  });
+
+  it("successfully caches Finnhub quote when fetched and then completes BUY", async () => {
+    setupAuth();
+    const { fetchQuote } = await import("@/lib/finnhub");
+    vi.mocked(fetchQuote).mockResolvedValue({ c: 150.0, d: 1.5, dp: 1.0 });
+
+    const portfolioWithCash = { ...mockPortfolio, cashBalance: "5000.00" };
+    const freshCachedQuote = { ticker: "AAPL", price: "150.00", change: "1.50", changePercent: "1.00" };
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [portfolioWithCash];
+            if (selectCallCount === 3) return []; // no cached quote initially
+            return [freshCachedQuote]; // after insert, returns cached quote
+          }),
+        }),
+      }),
+    } as any));
+
+    vi.mocked(db.insert).mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockResolvedValue([{}]),
+      }),
+    } as any);
+
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      let txCount = 0;
+      const txMock = {
+        select: vi.fn().mockImplementation(() => ({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockImplementation(async () => {
+                txCount++;
+                if (txCount === 1) return [portfolioWithCash];
+                return []; // no existing holding
+              }),
+            }),
+          }),
+        })),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{}]) }),
+        update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }) }),
+      };
+      return fn(txMock);
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validBody),
+        });
+        expect(res.status).toBe(200);
       },
     });
   });

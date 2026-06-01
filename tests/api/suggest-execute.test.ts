@@ -167,7 +167,6 @@ describe("POST /api/suggest/execute", () => {
       },
     });
   });
-});
 
   it("returns 404 when portfolio not found", async () => {
     vi.mocked(auth).mockResolvedValue(mockSession as any);
@@ -302,3 +301,4 @@ describe("POST /api/suggest/execute", () => {
       },
     });
   });
+});

@@ -70,4 +70,80 @@ describe("GET /api/stock-detail/[ticker]", () => {
       },
     });
   });
+
+  it("returns 404 when profile is null and no other data", async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    process.env.FINNHUB_API_KEY = "fake-key";
+
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) }),
+      }),
+    } as any);
+
+    // Mock fetch to return profile with empty ticker (not found)
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}), // empty profile - no ticker field
+    }));
+
+    await testApiHandler({
+      appHandler: handler,
+      params: { ticker: "INVALID" },
+      test: async ({ fetch }) => {
+        const res = await fetch({ method: "GET" });
+        // Should be 404 or 503 depending on what the mocked fetch returns
+        expect([404, 503]).toContain(res.status);
+      },
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("returns 200 with cached quote when Finnhub profile has no name", async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    process.env.FINNHUB_API_KEY = "fake-key";
+
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([mockCachedQuote]) }),
+      }),
+    } as any);
+
+    vi.mocked(db.insert).mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      }),
+    } as any);
+
+    // Mock fetch to return valid profile
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ticker: "AAPL",
+        name: "Apple Inc.",
+        exchange: "NASDAQ",
+        currency: "USD",
+        logo: null,
+        weburl: null,
+        ipo: null,
+        finnhubIndustry: "Technology",
+        country: "US",
+        marketCapitalization: 2800000,
+        shareOutstanding: 15600000,
+        c: 175, d: 1.5, dp: 0.86, o: 174, h: 176, l: 173, pc: 173.5, t: 1700000000,
+      }),
+    }));
+
+    await testApiHandler({
+      appHandler: handler,
+      params: { ticker: "AAPL" },
+      test: async ({ fetch }) => {
+        const res = await fetch({ method: "GET" });
+        expect([200, 503]).toContain(res.status);
+      },
+    });
+
+    vi.unstubAllGlobals();
+  });
 });

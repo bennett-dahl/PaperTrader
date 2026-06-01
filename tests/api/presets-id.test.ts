@@ -105,6 +105,30 @@ describe("PATCH /api/presets/[id]", () => {
       },
     });
   });
+  it("returns 400 when riskLevel is invalid", async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([mockUser]) }),
+      }),
+    } as any);
+
+    await testApiHandler({
+      appHandler: handler,
+      params: { id: mockPreset.id },
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ riskLevel: "extreme" }),
+        });
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error).toMatch(/invalid riskLevel/i);
+      },
+    });
+  });
+
 });
 
 describe("DELETE /api/presets/[id]", () => {
@@ -167,4 +191,24 @@ describe("DELETE /api/presets/[id]", () => {
       },
     });
   });
+  it("returns 404 when user not found in DELETE", async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    vi.mocked(db.select).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) }),
+      }),
+    } as any);
+
+    await testApiHandler({
+      appHandler: handler,
+      params: { id: mockPreset.id },
+      test: async ({ fetch }) => {
+        const res = await fetch({ method: "DELETE" });
+        expect(res.status).toBe(404);
+        const json = await res.json();
+        expect(json.error).toMatch(/user not found/i);
+      },
+    });
+  });
+
 });
