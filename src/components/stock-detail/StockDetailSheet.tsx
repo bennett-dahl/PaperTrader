@@ -1067,7 +1067,7 @@ export function StockDetailSheet({
             transform: `translateY(${dragY}px)`,
             transition: dragY === 0 ? "transform 0.3s ease" : "none",
           }}
-          className="flex flex-col h-full"
+          className="flex-1 flex flex-col min-h-0"
         >
           {/* Drag handle — swipe target only */}
           <div
@@ -1120,7 +1120,7 @@ export function StockDetailSheet({
           </div>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y">
             {/* Loading state for entire sheet */}
             {detailStatus === "loading" && !detailData && (
               <div className="px-4 mb-4">
