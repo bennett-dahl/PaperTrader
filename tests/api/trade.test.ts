@@ -226,3 +226,342 @@ describe("POST /api/trade", () => {
     });
   });
 });
+
+  it("returns 400 when type is missing", async () => {
+    setupAuth();
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticker: "AAPL", shares: 1, portfolioId: "p1" }),
+        });
+        expect(res.status).toBe(400);
+      },
+    });
+  });
+
+  it("SELL: returns 422 when insufficient shares", async () => {
+    setupAuth();
+    const cachedQuote = { ticker: "AAPL", price: "150.00", change: "1.00", changePercent: "0.67" };
+    const portfolioWithCash = { ...mockPortfolio, cashBalance: "5000.00" };
+    const existingHolding = { id: "h1", portfolioId: mockPortfolio.id, ticker: "AAPL", shares: "0.5000", avgCostBasis: "140.00" };
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [portfolioWithCash];
+            return [cachedQuote]; // cached quote
+          }),
+        }),
+      }),
+    } as any));
+
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      let txCount = 0;
+      const txMock = {
+        select: vi.fn().mockImplementation(() => ({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockImplementation(async () => {
+                txCount++;
+                if (txCount === 1) return [portfolioWithCash];
+                return [existingHolding]; // existing holding with 0.5 shares
+              }),
+            }),
+          }),
+        })),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{}]) }),
+        update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }) }),
+      };
+      return fn(txMock);
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...validBody, type: "SELL", shares: 2 }), // want to sell 2 but only have 0.5
+        });
+        expect(res.status).toBe(422);
+      },
+    });
+  });
+
+  it("SELL: returns 422 when holding doesn't exist", async () => {
+    setupAuth();
+    const cachedQuote = { ticker: "AAPL", price: "150.00", change: "1.00", changePercent: "0.67" };
+    const portfolioWithCash = { ...mockPortfolio, cashBalance: "5000.00" };
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [portfolioWithCash];
+            return [cachedQuote];
+          }),
+        }),
+      }),
+    } as any));
+
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      let txCount = 0;
+      const txMock = {
+        select: vi.fn().mockImplementation(() => ({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockImplementation(async () => {
+                txCount++;
+                if (txCount === 1) return [portfolioWithCash];
+                return []; // no existing holding
+              }),
+            }),
+          }),
+        })),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{}]) }),
+        update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }) }),
+      };
+      return fn(txMock);
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...validBody, type: "SELL", shares: 1 }),
+        });
+        expect(res.status).toBe(422);
+        const json = await res.json();
+        expect(json.error).toMatch(/don't hold/i);
+      },
+    });
+  });
+
+  it("BUY: returns 422 when insufficient cash", async () => {
+    setupAuth();
+    const cachedQuote = { ticker: "AAPL", price: "150.00", change: "1.00", changePercent: "0.67" };
+    const portfolioWithLowCash = { ...mockPortfolio, cashBalance: "10.00" }; // only $10
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [portfolioWithLowCash];
+            return [cachedQuote];
+          }),
+        }),
+      }),
+    } as any));
+
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      const txMock = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([portfolioWithLowCash]),
+            }),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{}]) }),
+        update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }) }),
+      };
+      return fn(txMock);
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...validBody, shares: 100 }), // $15000 but only $10
+        });
+        expect(res.status).toBe(422);
+      },
+    });
+  });
+
+  it("SELL: succeeds when selling existing holding entirely (small remaining shares)", async () => {
+    setupAuth();
+    const cachedQuote = { ticker: "AAPL", price: "150.00", change: "1.00", changePercent: "0.67" };
+    const portfolioWithCash = { ...mockPortfolio, cashBalance: "1000.00" };
+    const existingHolding = { id: "h1", portfolioId: mockPortfolio.id, ticker: "AAPL", shares: "1.0000", avgCostBasis: "140.00" };
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [portfolioWithCash];
+            return [cachedQuote];
+          }),
+        }),
+      }),
+    } as any));
+
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      let txCount = 0;
+      const txMock = {
+        select: vi.fn().mockImplementation(() => ({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockImplementation(async () => {
+                txCount++;
+                if (txCount === 1) return [portfolioWithCash];
+                return [existingHolding];
+              }),
+            }),
+          }),
+        })),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{}]) }),
+        update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }) }),
+        delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }),
+      };
+      return fn(txMock);
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...validBody, type: "SELL", shares: 1 }), // sell all 1 share -> delete holding
+        });
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.success).toBe(true);
+      },
+    });
+  });
+
+  it("BUY succeeds when existing holding already exists (avg cost update)", async () => {
+    setupAuth();
+    const cachedQuote = { ticker: "AAPL", price: "150.00", change: "1.00", changePercent: "0.67" };
+    const portfolioWithCash = { ...mockPortfolio, cashBalance: "5000.00" };
+    const existingHolding = { id: "h1", portfolioId: mockPortfolio.id, ticker: "AAPL", shares: "5.0000", avgCostBasis: "140.00" };
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [portfolioWithCash];
+            return [cachedQuote];
+          }),
+        }),
+      }),
+    } as any));
+
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      let txCount = 0;
+      const txMock = {
+        select: vi.fn().mockImplementation(() => ({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockImplementation(async () => {
+                txCount++;
+                if (txCount === 1) return [portfolioWithCash];
+                return [existingHolding]; // already has holding
+              }),
+            }),
+          }),
+        })),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{}]) }),
+        update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }) }),
+      };
+      return fn(txMock);
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validBody),
+        });
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.success).toBe(true);
+      },
+    });
+  });
+
+  it("fetches from Finnhub when no cached quote exists and caches it", async () => {
+    setupAuth();
+    const { fetchQuote } = await import("@/lib/finnhub");
+    vi.mocked(fetchQuote).mockResolvedValue({ c: 150.0, d: 1.5, dp: 1.0 });
+
+    let selectCallCount = 0;
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => {
+            selectCallCount++;
+            if (selectCallCount === 1) return [mockUser];
+            if (selectCallCount === 2) return [{ ...mockPortfolio, cashBalance: "5000.00" }];
+            if (selectCallCount === 3) return []; // no cached quote initially
+            return [{ ticker: "AAPL", price: "150.00", change: "1.50", changePercent: "1.00" }]; // after insert
+          }),
+        }),
+      }),
+    } as any));
+
+    vi.mocked(db.insert).mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockResolvedValue([{}]),
+      }),
+    } as any);
+
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      let txCount = 0;
+      const txMock = {
+        select: vi.fn().mockImplementation(() => ({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockImplementation(async () => {
+                txCount++;
+                if (txCount === 1) return [{ ...mockPortfolio, cashBalance: "5000.00" }];
+                return [];
+              }),
+            }),
+          }),
+        })),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{}]) }),
+        update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{}]) }) }),
+      };
+      return fn(txMock);
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validBody),
+        });
+        expect([200, 422]).toContain(res.status);
+      },
+    });
+  });

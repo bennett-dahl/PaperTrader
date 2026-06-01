@@ -2,11 +2,11 @@ import { testApiHandler } from "next-test-api-route-handler";
 import { describe, it, expect, vi } from "vitest";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { mockUser, mockPortfolio, mockSession, mockStockUniverse } from "../fixtures/factories";
+import { mockUser, mockPortfolio, mockHolding, mockCachedQuote, mockSession } from "../fixtures/factories";
 
-import * as handler from "@/app/api/suggest/route";
+import * as handler from "@/app/api/holdings/route";
 
-describe("GET /api/suggest", () => {
+describe("GET /api/holdings", () => {
   it("returns 401 when no session", async () => {
     vi.mocked(auth).mockResolvedValue(null);
     await testApiHandler({
@@ -18,43 +18,20 @@ describe("GET /api/suggest", () => {
     });
   });
 
-  it("returns 400 when portfolioId missing", async () => {
+  it("returns 400 when portfolioId param missing", async () => {
     vi.mocked(auth).mockResolvedValue(mockSession as any);
     await testApiHandler({
       appHandler: handler,
-      url: "/api/suggest?amount=100&riskLevel=low",
       test: async ({ fetch }) => {
         const res = await fetch({ method: "GET" });
         expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error).toMatch(/portfolioId/i);
       },
     });
   });
 
-  it("returns 400 when amount <= 0", async () => {
-    vi.mocked(auth).mockResolvedValue(mockSession as any);
-    await testApiHandler({
-      appHandler: handler,
-      url: "/api/suggest?portfolioId=p1&amount=0&riskLevel=low",
-      test: async ({ fetch }) => {
-        const res = await fetch({ method: "GET" });
-        expect(res.status).toBe(400);
-      },
-    });
-  });
-
-  it("returns 400 when riskLevel invalid", async () => {
-    vi.mocked(auth).mockResolvedValue(mockSession as any);
-    await testApiHandler({
-      appHandler: handler,
-      url: "/api/suggest?portfolioId=p1&amount=100&riskLevel=extreme",
-      test: async ({ fetch }) => {
-        const res = await fetch({ method: "GET" });
-        expect(res.status).toBe(400);
-      },
-    });
-  });
-
-  it("returns 404 when user not found", async () => {
+  it("returns 404 when user not found in db", async () => {
     vi.mocked(auth).mockResolvedValue(mockSession as any);
     vi.mocked(db.select).mockReturnValue({
       from: vi.fn().mockReturnValue({
@@ -64,7 +41,7 @@ describe("GET /api/suggest", () => {
 
     await testApiHandler({
       appHandler: handler,
-      url: "/api/suggest?portfolioId=p1&amount=100&riskLevel=low",
+      url: "/api/holdings?portfolioId=p1",
       test: async ({ fetch }) => {
         const res = await fetch({ method: "GET" });
         expect(res.status).toBe(404);
@@ -73,33 +50,6 @@ describe("GET /api/suggest", () => {
       },
     });
   });
-
-  it("returns 422 when amount > cashBalance", async () => {
-    vi.mocked(auth).mockResolvedValue(mockSession as any);
-    let count = 0;
-    vi.mocked(db.select).mockImplementation(() => ({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockImplementation(async () => {
-            count++;
-            if (count === 1) return [mockUser];
-            return [{ ...mockPortfolio, cashBalance: "100.00" }]; // only $100
-          }),
-        }),
-      }),
-    } as any));
-
-    await testApiHandler({
-      appHandler: handler,
-      // Request $1000 but only $100 available
-      url: "/api/suggest?portfolioId=p1&amount=1000&riskLevel=low",
-      test: async ({ fetch }) => {
-        const res = await fetch({ method: "GET" });
-        expect(res.status).toBe(422);
-      },
-    });
-  });
-});
 
   it("returns 404 when portfolio not found", async () => {
     vi.mocked(auth).mockResolvedValue(mockSession as any);
@@ -118,7 +68,7 @@ describe("GET /api/suggest", () => {
 
     await testApiHandler({
       appHandler: handler,
-      url: "/api/suggest?portfolioId=p1&amount=100&riskLevel=low",
+      url: "/api/holdings?portfolioId=p1",
       test: async ({ fetch }) => {
         const res = await fetch({ method: "GET" });
         expect(res.status).toBe(404);
@@ -128,7 +78,7 @@ describe("GET /api/suggest", () => {
     });
   });
 
-  it("returns 404 when no stocks found for given params", async () => {
+  it("returns 404 when portfolio belongs to different user", async () => {
     vi.mocked(auth).mockResolvedValue(mockSession as any);
     let count = 0;
     vi.mocked(db.select).mockImplementation(() => ({
@@ -137,33 +87,89 @@ describe("GET /api/suggest", () => {
           limit: vi.fn().mockImplementation(async () => {
             count++;
             if (count === 1) return [mockUser];
-            return [{ ...mockPortfolio, cashBalance: "5000.00" }];
+            return [{ ...mockPortfolio, userId: "other-user-id" }];
           }),
-          // For stock universe (no limit)
-          mockResolvedValue: [],
         }),
       }),
     } as any));
 
-    // Need to handle the stockUniverse select (which has no .limit)
-    let callCount = 0;
+    await testApiHandler({
+      appHandler: handler,
+      url: `/api/holdings?portfolioId=${mockPortfolio.id}`,
+      test: async ({ fetch }) => {
+        const res = await fetch({ method: "GET" });
+        expect(res.status).toBe(404);
+      },
+    });
+  });
+
+  it("returns holdings with cash balance when portfolio is valid", async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    let selectCount = 0;
     vi.mocked(db.select).mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
+      selectCount++;
+      if (selectCount === 1) {
         return {
           from: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([mockUser]) }),
           }),
         } as any;
       }
-      if (callCount === 2) {
+      if (selectCount === 2) {
         return {
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ ...mockPortfolio, cashBalance: "5000.00" }]) }),
+            where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([mockPortfolio]) }),
           }),
         } as any;
       }
-      // Stock universe query - empty candidates
+      if (selectCount === 3) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([mockHolding]),
+          }),
+        } as any;
+      }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([mockCachedQuote]),
+        }),
+      } as any;
+    });
+
+    await testApiHandler({
+      appHandler: handler,
+      url: `/api/holdings?portfolioId=${mockPortfolio.id}`,
+      test: async ({ fetch }) => {
+        const res = await fetch({ method: "GET" });
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(Array.isArray(json.holdings)).toBe(true);
+        expect(json.holdings[0].ticker).toBe("AAPL");
+        expect(json.holdings[0].name).toBe("Apple Inc.");
+        expect(typeof json.cashBalance).toBe("number");
+      },
+    });
+  });
+
+  it("returns empty holdings list when portfolio has no holdings", async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    let selectCount = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      selectCount++;
+      if (selectCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([mockUser]) }),
+          }),
+        } as any;
+      }
+      if (selectCount === 2) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([mockPortfolio]) }),
+          }),
+        } as any;
+      }
       return {
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([]),
@@ -173,53 +179,14 @@ describe("GET /api/suggest", () => {
 
     await testApiHandler({
       appHandler: handler,
-      url: "/api/suggest?portfolioId=p1&amount=100&riskLevel=low&categories=NonExistentCategory",
+      url: `/api/holdings?portfolioId=${mockPortfolio.id}`,
       test: async ({ fetch }) => {
         const res = await fetch({ method: "GET" });
-        expect(res.status).toBe(404);
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.holdings).toEqual([]);
+        expect(json.cashBalance).toBe(parseFloat(mockPortfolio.cashBalance));
       },
     });
   });
-
-  it("returns suggestions when valid params with categories", async () => {
-    vi.mocked(auth).mockResolvedValue(mockSession as any);
-
-    let callCount = 0;
-    vi.mocked(db.select).mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        return {
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([mockUser]) }),
-          }),
-        } as any;
-      }
-      if (callCount === 2) {
-        return {
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ ...mockPortfolio, cashBalance: "5000.00" }]) }),
-          }),
-        } as any;
-      }
-      // Stock universe query - return one stock
-      return {
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([mockStockUniverse]),
-        }),
-      } as any;
-    });
-
-    // buildAllocations needs cachedQuotes - mock db.select again for that
-    // Actually buildAllocations is imported from suggest-utils and will use the mocked db
-    // Let's mock selectDistinct which is used in suggest-utils
-
-    await testApiHandler({
-      appHandler: handler,
-      url: `/api/suggest?portfolioId=p1&amount=100&riskLevel=low&categories=Technology`,
-      test: async ({ fetch }) => {
-        const res = await fetch({ method: "GET" });
-        // 200 if everything worked, 404 if no stocks found
-        expect([200, 404]).toContain(res.status);
-      },
-    });
-  });
+});

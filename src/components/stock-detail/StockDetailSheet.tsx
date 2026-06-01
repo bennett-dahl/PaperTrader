@@ -1067,13 +1067,17 @@ export function StockDetailSheet({
             transform: `translateY(${dragY}px)`,
             transition: dragY === 0 ? "transform 0.3s ease" : "none",
           }}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
           className="flex flex-col h-full"
         >
-          {/* Drag handle */}
-          <DragHandle />
+          {/* Drag handle — swipe target only */}
+          <div
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            className="touch-none"
+          >
+            <DragHandle />
+          </div>
 
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3">
