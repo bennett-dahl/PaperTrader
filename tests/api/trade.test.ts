@@ -754,3 +754,74 @@ describe("POST /api/trade", () => {
       },
     });
   });
+
+// ─── PIPELINE_SECRET bypass tests ──────────────────────────────────────────
+
+describe("POST /api/trade — PIPELINE_SECRET bypass", () => {
+  const originalEnv = process.env.PIPELINE_SECRET;
+
+  beforeEach(() => {
+    process.env.PIPELINE_SECRET = "test-pipeline-secret";
+  });
+
+  it("returns 401 when pipeline secret is wrong", async () => {
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-pipeline-secret": "wrong-secret",
+          },
+          body: JSON.stringify({ ...validBody, userId: "user-1" }),
+        });
+        expect(res.status).toBe(401);
+      },
+    });
+  });
+
+  it("returns 400 when userId is missing on pipeline request", async () => {
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-pipeline-secret": "test-pipeline-secret",
+          },
+          body: JSON.stringify(validBody), // no userId
+        });
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error).toMatch(/userId required/i);
+      },
+    });
+  });
+
+  it("returns 404 when portfolio not found for pipeline request", async () => {
+    vi.mocked(db.select).mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]), // portfolio not found
+        }),
+      }),
+    } as any));
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-pipeline-secret": "test-pipeline-secret",
+          },
+          body: JSON.stringify({ ...validBody, userId: "user-1" }),
+        });
+        expect(res.status).toBe(404);
+      },
+    });
+  });
+});

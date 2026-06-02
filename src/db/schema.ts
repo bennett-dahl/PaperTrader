@@ -7,12 +7,40 @@ import {
   boolean,
   pgEnum,
   integer,
+  unique,
+  index,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // Enums
 export const transactionTypeEnum = pgEnum("transaction_type", ["BUY", "SELL"]);
 export const riskLevelEnum = pgEnum("risk_level", ["low", "medium", "high"]);
+
+export const pipelineStatusEnum = pgEnum("pipeline_status", [
+  "active",
+  "paused",
+  "archived",
+]);
+
+export const runStatusEnum = pgEnum("run_status", [
+  "pending",
+  "running",
+  "completed",
+  "failed",
+  "skipped",
+]);
+
+export const decisionActionEnum = pgEnum("decision_action", [
+  "BUY",
+  "SELL",
+  "HOLD",
+  "SKIP",
+]);
+
+export const strategyTypeEnum = pgEnum("strategy_type", [
+  "thesis_driven",
+  "signal_driven",
+]);
 
 // Users table
 export const users = pgTable("users", {
@@ -124,10 +152,152 @@ export const portfolioBuilderPresets = pgTable("portfolio_builder_presets", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Strategy Templates
+export const strategyTemplates = pgTable("strategy_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  strategyType: strategyTypeEnum("strategy_type").notNull().default("thesis_driven"),
+  thesis: text("thesis").notNull(),
+  tickerUniverse: text("ticker_universe").array().notNull().default([]),
+  maxPositions: integer("max_positions").default(10).notNull(),
+  maxPositionPct: decimal("max_position_pct", { precision: 5, scale: 2 }).default("10.00").notNull(),
+  minCashReservePct: decimal("min_cash_reserve_pct", { precision: 5, scale: 2 }).default("5.00").notNull(),
+  earningsLookbackDays: integer("earnings_lookback_days").default(3).notNull(),
+  earningsForwardDays: integer("earnings_forward_days").default(7).notNull(),
+  minConfidenceThreshold: decimal("min_confidence_threshold", { precision: 4, scale: 2 }).default("0.65").notNull(),
+  autonomous: boolean("autonomous").default(true).notNull(),
+  allowShortSell: boolean("allow_short_sell").default(false).notNull(),
+  rebalanceOnRun: boolean("rebalance_on_run").default(false).notNull(),
+  hypothesisConfig: text("hypothesis_config"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Pipelines
+export const pipelines = pgTable("pipelines", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  templateId: uuid("template_id")
+    .references(() => strategyTemplates.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  status: pipelineStatusEnum("status").notNull().default("active"),
+  thesis: text("thesis").notNull(),
+  strategyType: strategyTypeEnum("strategy_type").notNull().default("thesis_driven"),
+  tickerUniverse: text("ticker_universe").array().notNull().default([]),
+  maxPositions: integer("max_positions").default(10).notNull(),
+  maxPositionPct: decimal("max_position_pct", { precision: 5, scale: 2 }).default("10.00").notNull(),
+  minCashReservePct: decimal("min_cash_reserve_pct", { precision: 5, scale: 2 }).default("5.00").notNull(),
+  earningsLookbackDays: integer("earnings_lookback_days").default(3).notNull(),
+  earningsForwardDays: integer("earnings_forward_days").default(7).notNull(),
+  minConfidenceThreshold: decimal("min_confidence_threshold", { precision: 4, scale: 2 }).default("0.65").notNull(),
+  autonomous: boolean("autonomous").default(true).notNull(),
+  allowShortSell: boolean("allow_short_sell").default(false).notNull(),
+  rebalanceOnRun: boolean("rebalance_on_run").default(false).notNull(),
+  hypothesisConfig: text("hypothesis_config"),
+  configOverrides: text("config_overrides").array().notNull().default([]),
+  lastRunAt: timestamp("last_run_at"),
+  nextRunAt: timestamp("next_run_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Pipeline Portfolios (many-to-many)
+export const pipelinePortfolios = pgTable(
+  "pipeline_portfolios",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pipelineId: uuid("pipeline_id")
+      .references(() => pipelines.id, { onDelete: "cascade" })
+      .notNull(),
+    portfolioId: uuid("portfolio_id")
+      .references(() => portfolios.id, { onDelete: "cascade" })
+      .notNull(),
+    allocationPct: decimal("allocation_pct", { precision: 5, scale: 2 }).default("100.00").notNull(),
+    assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniq: unique().on(t.pipelineId, t.portfolioId),
+  })
+);
+
+// Pipeline Runs
+export const pipelineRuns = pgTable("pipeline_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  pipelineId: uuid("pipeline_id")
+    .references(() => pipelines.id, { onDelete: "cascade" })
+    .notNull(),
+  status: runStatusEnum("status").notNull().default("pending"),
+  triggeredBy: text("triggered_by").notNull().default("cron"),
+  tickersEvaluated: integer("tickers_evaluated").default(0).notNull(),
+  tradesExecuted: integer("trades_executed").default(0).notNull(),
+  tradesSkipped: integer("trades_skipped").default(0).notNull(),
+  tradesFailed: integer("trades_failed").default(0).notNull(),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+});
+
+// Decision Log
+export const decisionLog = pgTable("decision_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  runId: uuid("run_id")
+    .references(() => pipelineRuns.id, { onDelete: "cascade" })
+    .notNull(),
+  pipelineId: uuid("pipeline_id")
+    .references(() => pipelines.id, { onDelete: "cascade" })
+    .notNull(),
+  portfolioId: uuid("portfolio_id")
+    .references(() => portfolios.id, { onDelete: "set null" }),
+  ticker: text("ticker").notNull(),
+  action: decisionActionEnum("action").notNull(),
+  confidence: decimal("confidence", { precision: 4, scale: 2 }),
+  shares: decimal("shares", { precision: 15, scale: 6 }),
+  priceAtDecision: decimal("price_at_decision", { precision: 15, scale: 4 }),
+  reasoning: text("reasoning").notNull(),
+  signalSummary: text("signal_summary"),
+  executed: boolean("executed").default(false).notNull(),
+  executionError: text("execution_error"),
+  decidedAt: timestamp("decided_at").defaultNow().notNull(),
+});
+
+// Earnings Signals (cache)
+export const earningsSignals = pgTable(
+  "earnings_signals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ticker: text("ticker").notNull(),
+    reportDate: text("report_date").notNull(),
+    reportTime: text("report_time"),
+    epsActual: decimal("eps_actual", { precision: 10, scale: 4 }),
+    epsEstimate: decimal("eps_estimate", { precision: 10, scale: 4 }),
+    epsBeat: boolean("eps_beat"),
+    epsSurprisePct: decimal("eps_surprise_pct", { precision: 8, scale: 4 }),
+    analystRevisionDirection: text("analyst_revision_direction"),
+    revenueActual: decimal("revenue_actual", { precision: 20, scale: 2 }),
+    revenueEstimate: decimal("revenue_estimate", { precision: 20, scale: 2 }),
+    revenueBeat: boolean("revenue_beat"),
+    rawData: text("raw_data"),
+    fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (t) => ({
+    tickerDateUniq: unique().on(t.ticker, t.reportDate),
+  })
+);
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   portfolios: many(portfolios),
   presets: many(portfolioBuilderPresets),
+  strategyTemplates: many(strategyTemplates),
+  pipelines: many(pipelines),
 }));
 
 export const portfoliosRelations = relations(portfolios, ({ one, many }) => ({
@@ -136,6 +306,7 @@ export const portfoliosRelations = relations(portfolios, ({ one, many }) => ({
   transactions: many(transactions),
   snapshots: many(portfolioSnapshots),
   watchlist: many(watchlist),
+  pipelineLinks: many(pipelinePortfolios),
 }));
 
 export const holdingsRelations = relations(holdings, ({ one }) => ({
@@ -179,6 +350,35 @@ export const portfolioBuilderPresetsRelations = relations(
   })
 );
 
+export const strategyTemplatesRelations = relations(strategyTemplates, ({ one, many }) => ({
+  user: one(users, { fields: [strategyTemplates.userId], references: [users.id] }),
+  pipelines: many(pipelines),
+}));
+
+export const pipelinesRelations = relations(pipelines, ({ one, many }) => ({
+  user: one(users, { fields: [pipelines.userId], references: [users.id] }),
+  template: one(strategyTemplates, { fields: [pipelines.templateId], references: [strategyTemplates.id] }),
+  portfolioLinks: many(pipelinePortfolios),
+  runs: many(pipelineRuns),
+  decisions: many(decisionLog),
+}));
+
+export const pipelinePortfoliosRelations = relations(pipelinePortfolios, ({ one }) => ({
+  pipeline: one(pipelines, { fields: [pipelinePortfolios.pipelineId], references: [pipelines.id] }),
+  portfolio: one(portfolios, { fields: [pipelinePortfolios.portfolioId], references: [portfolios.id] }),
+}));
+
+export const pipelineRunsRelations = relations(pipelineRuns, ({ one, many }) => ({
+  pipeline: one(pipelines, { fields: [pipelineRuns.pipelineId], references: [pipelines.id] }),
+  decisions: many(decisionLog),
+}));
+
+export const decisionLogRelations = relations(decisionLog, ({ one }) => ({
+  run: one(pipelineRuns, { fields: [decisionLog.runId], references: [pipelineRuns.id] }),
+  pipeline: one(pipelines, { fields: [decisionLog.pipelineId], references: [pipelines.id] }),
+  portfolio: one(portfolios, { fields: [decisionLog.portfolioId], references: [portfolios.id] }),
+}));
+
 // TypeScript types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -197,3 +397,13 @@ export type StockUniverse = typeof stockUniverse.$inferSelect;
 export type NewStockUniverse = typeof stockUniverse.$inferInsert;
 export type PortfolioBuilderPreset = typeof portfolioBuilderPresets.$inferSelect;
 export type NewPortfolioBuilderPreset = typeof portfolioBuilderPresets.$inferInsert;
+export type StrategyTemplate = typeof strategyTemplates.$inferSelect;
+export type NewStrategyTemplate = typeof strategyTemplates.$inferInsert;
+export type Pipeline = typeof pipelines.$inferSelect;
+export type NewPipeline = typeof pipelines.$inferInsert;
+export type PipelinePortfolio = typeof pipelinePortfolios.$inferSelect;
+export type PipelineRun = typeof pipelineRuns.$inferSelect;
+export type NewPipelineRun = typeof pipelineRuns.$inferInsert;
+export type DecisionLog = typeof decisionLog.$inferSelect;
+export type NewDecisionLog = typeof decisionLog.$inferInsert;
+export type EarningsSignalRow = typeof earningsSignals.$inferSelect;

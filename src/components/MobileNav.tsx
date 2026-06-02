@@ -13,6 +13,7 @@ import {
   LogOut,
   Wand2,
   Menu,
+  Zap,
 } from "lucide-react";
 import {
   Sheet,
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/watchlist", label: "Watchlist", icon: Eye },
   { href: "/history", label: "History", icon: Clock },
   { href: "/portfolios", label: "Portfolios", icon: Briefcase },
+  { href: "/pipelines", label: "Pipelines", icon: Zap },
 ];
 
 interface MobileNavProps {

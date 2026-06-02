@@ -1,22 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { portfolios, holdings, transactions, users, cachedQuotes } from "@/db/schema";
+import { portfolios, users, cachedQuotes } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getFinnhubClient, fetchQuote } from "@/lib/finnhub";
+import { executeTrade } from "@/lib/trade-executor";
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const pipelineSecret = req.headers.get("x-pipeline-secret");
+  let isPipelineRequest = false;
+
+  if (pipelineSecret !== null) {
+    if (pipelineSecret !== process.env.PIPELINE_SECRET) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    isPipelineRequest = true;
   }
 
+  // Step 1: Auth gate — before body parse, before any DB calls
+  let sessionEmail: string | null = null;
+  if (!isPipelineRequest) {
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    sessionEmail = session.user.email;
+  }
+
+  // Step 2: Parse and validate body fields
   const body = await req.json();
   const { ticker, type, shares, portfolioId } = body as {
     ticker: string;
     type: "BUY" | "SELL";
     shares: number;
     portfolioId: string;
+    userId?: string;
   };
 
   if (!ticker || !type || !shares || !portfolioId) {
@@ -27,21 +45,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Shares must be positive" }, { status: 400 });
   }
 
-  // Verify portfolio belongs to user
-  const dbUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  // Step 3: Resolve userId (DB lookup for session users; body field for pipeline)
+  let authedUserId: string | null = null;
 
-  if (!dbUser[0]) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (!isPipelineRequest) {
+    const dbUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, sessionEmail!))
+      .limit(1);
+
+    if (!dbUser[0]) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    authedUserId = dbUser[0].id;
+  } else {
+    authedUserId = body.userId ?? null;
+    if (!authedUserId) {
+      return NextResponse.json({ error: "userId required for pipeline requests" }, { status: 400 });
+    }
   }
 
+  // Portfolio ownership check
   const portfolio = await db
     .select()
     .from(portfolios)
-    .where(and(eq(portfolios.id, portfolioId), eq(portfolios.userId, dbUser[0].id)))
+    .where(and(eq(portfolios.id, portfolioId), eq(portfolios.userId, authedUserId!)))
     .limit(1);
 
   if (!portfolio[0]) {
@@ -80,7 +110,6 @@ export async function POST(req: NextRequest) {
             },
           });
 
-        // Re-fetch from DB so we use the canonical record
         quote = await db
           .select()
           .from(cachedQuotes)
@@ -100,132 +129,32 @@ export async function POST(req: NextRequest) {
   }
 
   const price = parseFloat(quote[0].price);
-  const totalCost = price * shares;
 
-  // Wrap all trade execution in a transaction to prevent race conditions
-  // (concurrent requests on the same portfolio could double-spend cash or corrupt share counts)
-  let tradeResult: { type: string; ticker: string; shares: number; pricePerShare: number; totalAmount: number };
-  try {
-    tradeResult = await db.transaction(async (tx) => {
-      // Re-read cash balance inside the transaction for consistency
-      const [currentPortfolio] = await tx
-        .select()
-        .from(portfolios)
-        .where(eq(portfolios.id, portfolioId))
-        .limit(1);
-      const cashBalance = parseFloat(currentPortfolio.cashBalance);
+  const result = await executeTrade({
+    portfolioId,
+    ticker,
+    type,
+    shares,
+    userId: authedUserId!,
+    price, // pass pre-fetched price to avoid double lookup
+  });
 
-      if (type === "BUY") {
-        if (totalCost > cashBalance) {
-          throw Object.assign(
-            new Error(`Insufficient cash. You need $${totalCost.toFixed(2)} but have $${cashBalance.toFixed(2)}`),
-            { status: 422 }
-          );
-        }
-
-        // Check if existing holding
-        const existing = await tx
-          .select()
-          .from(holdings)
-          .where(
-            and(
-              eq(holdings.portfolioId, portfolioId),
-              eq(holdings.ticker, ticker.toUpperCase())
-            )
-          )
-          .limit(1);
-
-        if (existing[0]) {
-          // Update average cost basis
-          const existingShares = parseFloat(existing[0].shares);
-          const existingCost = parseFloat(existing[0].avgCostBasis);
-          const newShares = existingShares + shares;
-          const newAvg = (existingShares * existingCost + shares * price) / newShares;
-
-          await tx
-            .update(holdings)
-            .set({ shares: String(newShares), avgCostBasis: String(newAvg) })
-            .where(eq(holdings.id, existing[0].id));
-        } else {
-          await tx.insert(holdings).values({
-            portfolioId,
-            ticker: ticker.toUpperCase(),
-            shares: String(shares),
-            avgCostBasis: String(price),
-          });
-        }
-
-        // Deduct cash
-        await tx
-          .update(portfolios)
-          .set({ cashBalance: String(cashBalance - totalCost) })
-          .where(eq(portfolios.id, portfolioId));
-      } else {
-        // SELL
-        const existing = await tx
-          .select()
-          .from(holdings)
-          .where(
-            and(
-              eq(holdings.portfolioId, portfolioId),
-              eq(holdings.ticker, ticker.toUpperCase())
-            )
-          )
-          .limit(1);
-
-        if (!existing[0]) {
-          throw Object.assign(new Error("You don't hold this stock"), { status: 422 });
-        }
-
-        const existingShares = parseFloat(existing[0].shares);
-        if (shares > existingShares) {
-          throw Object.assign(
-            new Error(`You only have ${existingShares.toFixed(4)} shares to sell`),
-            { status: 422 }
-          );
-        }
-
-        const newShares = existingShares - shares;
-        if (newShares < 0.0001) {
-          // Remove holding entirely
-          await tx.delete(holdings).where(eq(holdings.id, existing[0].id));
-        } else {
-          await tx
-            .update(holdings)
-            .set({ shares: String(newShares) })
-            .where(eq(holdings.id, existing[0].id));
-        }
-
-        // Add cash
-        await tx
-          .update(portfolios)
-          .set({ cashBalance: String(cashBalance + totalCost) })
-          .where(eq(portfolios.id, portfolioId));
-      }
-
-      // Record transaction
-      await tx.insert(transactions).values({
-        portfolioId,
-        ticker: ticker.toUpperCase(),
-        type,
-        shares: String(shares),
-        pricePerShare: String(price),
-        totalAmount: String(totalCost),
-      });
-
-      return {
-        type,
-        ticker: ticker.toUpperCase(),
-        shares,
-        pricePerShare: price,
-        totalAmount: totalCost,
-      };
-    });
-  } catch (err: unknown) {
-    const status = (err as { status?: number }).status ?? 500;
-    const message = err instanceof Error ? err.message : "Trade failed";
-    return NextResponse.json({ error: message }, { status });
+  if (!result.success) {
+    const errMsg = result.error ?? "Trade failed";
+    const status = errMsg === "Portfolio not found" ? 404 :
+                   errMsg === "Unauthorized" ? 401 :
+                   errMsg === "Trade failed" ? 500 : 422;
+    return NextResponse.json({ error: errMsg }, { status });
   }
 
-  return NextResponse.json({ success: true, trade: tradeResult });
+  return NextResponse.json({
+    success: true,
+    trade: {
+      type,
+      ticker: ticker.toUpperCase(),
+      shares,
+      pricePerShare: price,
+      totalAmount: price * shares,
+    },
+  });
 }

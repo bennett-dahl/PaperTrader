@@ -10,6 +10,7 @@ import {
   Briefcase,
   LogOut,
   Wand2,
+  Zap,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/watchlist", label: "Watchlist", icon: Eye },
   { href: "/history", label: "History", icon: Clock },
   { href: "/portfolios", label: "Portfolios", icon: Briefcase },
+  { href: "/pipelines", label: "Pipelines", icon: Zap },
 ];
 
 interface SidebarProps {
