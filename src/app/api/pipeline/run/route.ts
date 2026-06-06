@@ -68,6 +68,8 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
     let totalExecuted = 0;
     let totalSkipped = 0;
     let totalFailed = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
 
     for (const link of pipeline.portfolioLinks) {
       const portfolioId = link.portfolioId;
@@ -102,12 +104,14 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       // Call AI
       let aiOutput: AIDecisionOutput;
       try {
-        const { object } = await generateObject({
+        const { object, usage } = await generateObject({
           model: anthropic("claude-3-5-haiku-20241022"),
           schema: decisionSchema,
           prompt: buildPrompt(pipeline, tickers, earningsMap, portfolioState, today),
         });
         aiOutput = object;
+        totalInputTokens += usage.inputTokens ?? 0;
+        totalOutputTokens += usage.outputTokens ?? 0;
       } catch (aiErr) {
         console.error("[pipeline/run] AI failed:", aiErr);
         throw aiErr;
@@ -268,6 +272,10 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
     }
 
     // Finalize run
+    const COST_PER_INPUT_TOKEN = 0.80 / 1_000_000;
+    const COST_PER_OUTPUT_TOKEN = 4.00 / 1_000_000;
+    const costUsd = (totalInputTokens * COST_PER_INPUT_TOKEN) + (totalOutputTokens * COST_PER_OUTPUT_TOKEN);
+
     await db.update(pipelineRuns).set({
       status: "completed",
       completedAt: new Date(),
@@ -276,6 +284,9 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       tradesExecuted: totalExecuted,
       tradesSkipped: totalSkipped,
       tradesFailed: totalFailed,
+      inputTokens: totalInputTokens,
+      outputTokens: totalOutputTokens,
+      costUsd: String(costUsd),
     }).where(eq(pipelineRuns.id, run.id));
 
     const nextRun = new Date();

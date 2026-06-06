@@ -15,6 +15,13 @@
       "when": 1780372928795,
       "tag": "0001_tired_la_nuit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780762602123,
+      "tag": "0002_token_tracking",
+      "breakpoints": true
     }
   ]
 }

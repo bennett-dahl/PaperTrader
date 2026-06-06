@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { db } from "@/db";
 import {
-  pipelines, strategyTemplates, pipelinePortfolios, pipelineRuns,
-  users, portfolios
+  pipelines, strategyTemplates, pipelinePortfolios, pipelineRuns, portfolios,
 } from "@/db/schema";
 import { eq, and, desc, count, sum } from "drizzle-orm";
 import { resolveConfig } from "@/lib/pipeline-config";
-
-async function getAuthUser(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.email) return null;
-  const dbUser = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
-  return dbUser[0] ?? null;
-}
+import { requireAdminUser } from "../_auth";
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser(req);
+  const user = await requireAdminUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const allPipelines = await db
@@ -25,7 +17,6 @@ export async function GET(req: NextRequest) {
     .where(eq(pipelines.userId, user.id))
     .orderBy(desc(pipelines.createdAt));
 
-  // Enrich with portfolio count and last run status + token aggregates
   const enriched = await Promise.all(allPipelines.map(async (p) => {
     const portfolioLinks = await db
       .select({ portfolioId: pipelinePortfolios.portfolioId })
@@ -50,7 +41,12 @@ export async function GET(req: NextRequest) {
       .where(eq(pipelineRuns.pipelineId, p.id));
 
     return {
-      ...p,
+      id: p.id,
+      name: p.name,
+      status: p.status,
+      strategyType: p.strategyType,
+      thesis: p.thesis,
+      createdAt: p.createdAt.toISOString(),
       portfolioCount: portfolioLinks.length,
       lastRunStatus: lastRun[0]?.status ?? null,
       lastRunAt: lastRun[0]?.startedAt?.toISOString() ?? null,
@@ -65,7 +61,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser(req);
+  const user = await requireAdminUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -92,10 +88,11 @@ export async function POST(req: NextRequest) {
   }
 
   const userInput: Record<string, unknown> = {};
-  const inputFields = ["thesis", "strategyType", "tickerUniverse", "maxPositions",
+  const inputFields = [
+    "thesis", "strategyType", "tickerUniverse", "maxPositions",
     "maxPositionPct", "minCashReservePct", "earningsLookbackDays", "earningsForwardDays",
-    "minConfidenceThreshold", "autonomous", "allowShortSell", "rebalanceOnRun", "hypothesisConfig"];
-
+    "minConfidenceThreshold", "autonomous", "allowShortSell", "rebalanceOnRun", "hypothesisConfig",
+  ];
   for (const f of inputFields) {
     if (f in body && body[f] !== undefined) userInput[f] = body[f];
   }
@@ -128,8 +125,9 @@ export async function POST(req: NextRequest) {
   // Create portfolio assignments
   if (portfolioAssignments?.length > 0) {
     for (const assignment of portfolioAssignments) {
-      // Verify portfolio belongs to user
-      const portfolioRow = await db.select().from(portfolios)
+      const portfolioRow = await db
+        .select()
+        .from(portfolios)
         .where(and(eq(portfolios.id, assignment.portfolioId), eq(portfolios.userId, user.id)))
         .limit(1);
       if (portfolioRow[0]) {

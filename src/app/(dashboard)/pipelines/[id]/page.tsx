@@ -23,6 +23,20 @@ interface Run {
   tradesExecuted: number;
   tradesSkipped: number;
   tradesFailed: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: string;
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+function formatCostUsd(usd: string | number): string {
+  const n = typeof usd === "string" ? parseFloat(usd) : usd;
+  if (isNaN(n) || n === 0) return "—";
+  return `$${n.toFixed(4)}`;
 }
 
 interface Decision {
@@ -282,6 +296,8 @@ export default function PipelineDetailPage() {
                   <th className="px-4 py-3">Executed</th>
                   <th className="px-4 py-3">Skipped</th>
                   <th className="px-4 py-3">Duration</th>
+                  <th className="px-4 py-3">Tokens</th>
+                  <th className="px-4 py-3">Cost</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,11 +315,22 @@ export default function PipelineDetailPage() {
                     <td className="px-4 py-3 text-green-400">{run.tradesExecuted}</td>
                     <td className="px-4 py-3 text-slate-400">{run.tradesSkipped}</td>
                     <td className="px-4 py-3 text-slate-400">{run.durationMs ? `${(run.durationMs / 1000).toFixed(1)}s` : "—"}</td>
+                    <td className="px-4 py-3 text-slate-400">{formatTokens((run.inputTokens ?? 0) + (run.outputTokens ?? 0))}</td>
+                    <td className="px-4 py-3 text-slate-300">{formatCostUsd(run.costUsd ?? "0")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+          {runs.length > 0 && (() => {
+            const totalSpend = runs.reduce((s, r) => s + parseFloat(r.costUsd || "0"), 0);
+            return totalSpend > 0 ? (
+              <div className="px-4 py-3 border-t border-slate-700 text-sm text-slate-400 flex gap-1">
+                <span>Total spend:</span>
+                <span className="text-slate-200 font-medium">{formatCostUsd(totalSpend)}</span>
+              </div>
+            ) : null;
+          })()}
         </div>
       )}
 

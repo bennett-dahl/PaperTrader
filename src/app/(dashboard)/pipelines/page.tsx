@@ -14,6 +14,10 @@ interface PipelineListItem {
   lastRunAt: string | null;
   thesis: string;
   autonomous: boolean;
+  totalRuns: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCostUsd: string;
 }
 
 const STATUS_STYLES = {
@@ -28,6 +32,33 @@ function RunStatusIcon({ status }: { status: string | null }) {
   if (status === "failed") return <XCircle className="h-4 w-4 text-red-400" />;
   if (status === "skipped") return <MinusCircle className="h-4 w-4 text-yellow-400" />;
   return <span className="text-slate-400 text-xs">{status}</span>;
+}
+
+function formatCost(usd: string | number): string {
+  const n = typeof usd === "string" ? parseFloat(usd) : usd;
+  if (isNaN(n)) return "$0.000";
+  return `$${n.toFixed(4)}`;
+}
+
+function UsageSummaryCard({ pipelines }: { pipelines: PipelineListItem[] }) {
+  const totalSpend = pipelines.reduce((s, p) => s + parseFloat(p.totalCostUsd || "0"), 0);
+  const totalRuns = pipelines.reduce((s, p) => s + (p.totalRuns || 0), 0);
+  const avgPerRun = totalRuns > 0 ? totalSpend / totalRuns : 0;
+
+  return (
+    <div className="mb-6 bg-slate-900 border border-slate-700/50 rounded-xl p-4 flex items-center gap-6">
+      <div>
+        <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">AI Pipeline Spend — all time</p>
+        <div className="flex items-baseline gap-4 flex-wrap">
+          <span className="text-xl font-semibold text-slate-100">{formatCost(totalSpend)}</span>
+          <span className="text-sm text-slate-400">{totalRuns} run{totalRuns !== 1 ? "s" : ""}</span>
+          {totalRuns > 0 && (
+            <span className="text-sm text-slate-400">avg {formatCost(avgPerRun)} / run</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function PipelinesPage() {
@@ -97,6 +128,8 @@ export default function PipelinesPage() {
         </div>
       )}
 
+      <UsageSummaryCard pipelines={pipelines} />
+
       <div className="flex gap-2 mb-6">
         {(["all", "active", "paused", "archived"] as const).map((f) => (
           <button
@@ -153,7 +186,7 @@ export default function PipelinesPage() {
                     )}
                   </div>
                   <p className="text-sm text-slate-500 line-clamp-1 mb-3">{p.thesis}</p>
-                  <div className="flex items-center gap-4 text-xs text-slate-500">
+                  <div className="flex items-center gap-4 text-xs text-slate-500 mb-1.5">
                     <span>{p.strategyType.replace("_", " ")}</span>
                     <span>{p.portfolioCount} portfolio{p.portfolioCount !== 1 ? "s" : ""}</span>
                     <span className="flex items-center gap-1">
@@ -161,6 +194,13 @@ export default function PipelinesPage() {
                       {p.lastRunAt ? new Date(p.lastRunAt).toLocaleDateString() : "Never run"}
                     </span>
                   </div>
+                  {parseFloat(p.totalCostUsd || "0") > 0 && (
+                    <div className="text-xs text-slate-500">
+                      Cumulative spend: <span className="text-slate-400 font-medium">{formatCost(p.totalCostUsd)}</span>
+                      <span className="ml-2 text-slate-600">·</span>
+                      <span className="ml-2">{p.totalRuns} run{p.totalRuns !== 1 ? "s" : ""}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <button

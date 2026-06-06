@@ -242,6 +242,9 @@ export const pipelineRuns = pgTable("pipeline_runs", {
   startedAt: timestamp("started_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
   durationMs: integer("duration_ms"),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  costUsd: decimal("cost_usd", { precision: 10, scale: 6 }).notNull().default("0"),
 });
 
 // Decision Log
