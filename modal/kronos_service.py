@@ -29,6 +29,7 @@ image = (
         "huggingface_hub",
         "pandas",
         "numpy",
+        "fastapi",
     )
 )
 
@@ -155,7 +156,8 @@ def run_kronos_forecast(
     return {"results": results}
 
 
-@app.web_endpoint(method="POST")
+@app.function(image=image, secrets=[kronos_secret])
+@modal.fastapi_endpoint(method="POST")
 async def forecast_endpoint(request: dict) -> dict:
     """
     HTTP POST entry point. Verifies bearer token, delegates to run_kronos_forecast.
