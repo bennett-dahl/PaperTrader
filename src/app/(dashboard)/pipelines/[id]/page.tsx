@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Play, CheckCircle, XCircle, MinusCircle, ChevronDown } from "lucide-react";
+import { KronosForecastsCard, deriveSignal, type KronosForecastRow } from "@/components/KronosForecastsCard";
 
 interface PipelineDetail {
   pipeline: Record<string, unknown>;
@@ -86,6 +87,10 @@ export default function PipelineDetailPage() {
   const [decisionsLoading, setDecisionsLoading] = useState(false);
   const [expandedReasoning, setExpandedReasoning] = useState<string | null>(null);
 
+  // Kronos forecasts for selected run
+  const [kronosForecasts, setKronosForecasts] = useState<KronosForecastRow[]>([]);
+  const [kronosMinSignalPct, setKronosMinSignalPct] = useState<number>(1.0);
+
   useEffect(() => {
     fetchData();
   }, [id]);
@@ -102,6 +107,28 @@ export default function PipelineDetailPage() {
   useEffect(() => {
     if (selectedRunId) fetchDecisions(selectedRunId);
   }, [selectedRunId]);
+
+  useEffect(() => {
+    const strategyType = (data?.pipeline as Record<string, unknown> | null)?.strategyType;
+    if (selectedRunId && id && strategyType === "kronos_rotation") {
+      fetch(`/api/pipelines/${id}/runs/${selectedRunId}/forecasts`)
+        .then((r) => r.json())
+        .then((d) => {
+          const raw: Array<{ ticker: string; predictedReturnPct: number; signal: "buy" | "sell" | "hold" }> = d.forecasts ?? [];
+          const minPct: number = d.kronosMinSignalPct ?? 1.0;
+          setKronosForecasts(
+            raw.map((f) => ({
+              ...f,
+              signal: deriveSignal(f.predictedReturnPct, minPct),
+            }))
+          );
+          setKronosMinSignalPct(minPct);
+        })
+        .catch(() => setKronosForecasts([]));
+    } else {
+      setKronosForecasts([]);
+    }
+  }, [selectedRunId, id, data]);
 
   async function fetchData() {
     setLoading(true);
@@ -402,6 +429,16 @@ export default function PipelineDetailPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Kronos Forecasts Card (only for kronos_rotation pipelines) */}
+          {pipeline.strategyType === "kronos_rotation" && selectedRunId && (
+            <div className="mt-6">
+              <KronosForecastsCard
+                forecasts={kronosForecasts}
+                kronosMinSignalPct={kronosMinSignalPct}
+              />
             </div>
           )}
         </div>

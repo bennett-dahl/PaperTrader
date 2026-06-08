@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StockDetailSheet } from "@/components/stock-detail/StockDetailSheet";
 
@@ -86,5 +86,106 @@ describe("StockDetailSheet", () => {
       const found = timeframes.some((tf) => screen.queryByText(tf));
       expect(found).toBe(true);
     }, { timeout: 3000 });
+  });
+});
+
+describe("StockDetailSheet — Kronos forecast", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders Kronos Forecast row with +2.30% in green when forecast available", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/forecast")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              predictedReturnPct: 2.3,
+              forecastDate: "2026-06-07",
+            }),
+          });
+        }
+        // All other fetches (detail, candles) return pending so they don't race
+        return new Promise(() => {});
+      })
+    );
+
+    render(
+      <StockDetailSheet
+        open={true}
+        onClose={vi.fn()}
+        ticker="AAPL"
+        stockName="Apple Inc."
+        context="search"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Kronos Forecast")).toBeInTheDocument();
+    }, { timeout: 3000 });
+
+    expect(screen.getByText("+2.30%")).toBeInTheDocument();
+  });
+
+  it("does not render Kronos Forecast row when API returns null", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/forecast")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => null,
+          });
+        }
+        return new Promise(() => {});
+      })
+    );
+
+    render(
+      <StockDetailSheet
+        open={true}
+        onClose={vi.fn()}
+        ticker="AAPL"
+        stockName="Apple Inc."
+        context="search"
+      />
+    );
+
+    // Give async effects time to settle
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 100));
+    });
+
+    expect(screen.queryByText("Kronos Forecast")).not.toBeInTheDocument();
+  });
+
+  it("does not render Kronos Forecast row when fetch throws network error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/forecast")) {
+          return Promise.reject(new Error("Network error"));
+        }
+        return new Promise(() => {});
+      })
+    );
+
+    render(
+      <StockDetailSheet
+        open={true}
+        onClose={vi.fn()}
+        ticker="AAPL"
+        stockName="Apple Inc."
+        context="search"
+      />
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 100));
+    });
+
+    expect(screen.queryByText("Kronos Forecast")).not.toBeInTheDocument();
   });
 });

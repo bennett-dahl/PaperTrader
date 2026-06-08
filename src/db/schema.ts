@@ -9,6 +9,7 @@ import {
   integer,
   unique,
   index,
+  json,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -40,6 +41,7 @@ export const decisionActionEnum = pgEnum("decision_action", [
 export const strategyTypeEnum = pgEnum("strategy_type", [
   "thesis_driven",
   "signal_driven",
+  "kronos_rotation",
 ]);
 
 // Users table
@@ -173,6 +175,10 @@ export const strategyTemplates = pgTable("strategy_templates", {
   allowShortSell: boolean("allow_short_sell").default(false).notNull(),
   rebalanceOnRun: boolean("rebalance_on_run").default(false).notNull(),
   hypothesisConfig: text("hypothesis_config"),
+  // Kronos-specific configuration
+  kronosTickerUniverse: json("kronos_ticker_universe").$type<string[]>().default([]),
+  kronosRebalancePct: decimal("kronos_rebalance_pct", { precision: 5, scale: 2 }).default("50.00"),
+  kronosMinSignalPct: decimal("kronos_min_signal_pct", { precision: 5, scale: 2 }).default("1.00"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -201,11 +207,44 @@ export const pipelines = pgTable("pipelines", {
   rebalanceOnRun: boolean("rebalance_on_run").default(false).notNull(),
   hypothesisConfig: text("hypothesis_config"),
   configOverrides: text("config_overrides").array().notNull().default([]),
+  // Kronos-specific configuration
+  kronosTickerUniverse: json("kronos_ticker_universe").$type<string[]>().default([]),
+  kronosRebalancePct: decimal("kronos_rebalance_pct", { precision: 5, scale: 2 }).default("50.00"),
+  kronosMinSignalPct: decimal("kronos_min_signal_pct", { precision: 5, scale: 2 }).default("1.00"),
   lastRunAt: timestamp("last_run_at"),
   nextRunAt: timestamp("next_run_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Kronos Forecasts
+export const kronosForecasts = pgTable(
+  "kronos_forecasts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pipelineId: uuid("pipeline_id")
+      .references(() => pipelines.id, { onDelete: "cascade" })
+      .notNull(),
+    ticker: text("ticker").notNull(),
+    predictedReturnPct: decimal("predicted_return_pct", {
+      precision: 8,
+      scale: 4,
+    }).notNull(),
+    forecastDate: text("forecast_date").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    pipelineDateIdx: index("kronos_forecasts_pipeline_date_idx").on(
+      t.pipelineId,
+      t.forecastDate
+    ),
+    uniq: unique("kronos_forecasts_pipeline_ticker_date_uniq").on(
+      t.pipelineId,
+      t.ticker,
+      t.forecastDate
+    ),
+  })
+);
 
 // Pipeline Portfolios (many-to-many)
 export const pipelinePortfolios = pgTable(
@@ -364,6 +403,14 @@ export const pipelinesRelations = relations(pipelines, ({ one, many }) => ({
   portfolioLinks: many(pipelinePortfolios),
   runs: many(pipelineRuns),
   decisions: many(decisionLog),
+  kronosForecasts: many(kronosForecasts),
+}));
+
+export const kronosForecastsRelations = relations(kronosForecasts, ({ one }) => ({
+  pipeline: one(pipelines, {
+    fields: [kronosForecasts.pipelineId],
+    references: [pipelines.id],
+  }),
 }));
 
 export const pipelinePortfoliosRelations = relations(pipelinePortfolios, ({ one }) => ({
@@ -410,3 +457,5 @@ export type NewPipelineRun = typeof pipelineRuns.$inferInsert;
 export type DecisionLog = typeof decisionLog.$inferSelect;
 export type NewDecisionLog = typeof decisionLog.$inferInsert;
 export type EarningsSignalRow = typeof earningsSignals.$inferSelect;
+export type KronosForecast = typeof kronosForecasts.$inferSelect;
+export type NewKronosForecast = typeof kronosForecasts.$inferInsert;

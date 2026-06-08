@@ -53,6 +53,9 @@ export async function POST(req: NextRequest) {
       autonomous: body.autonomous ?? true,
       rebalanceOnRun: body.rebalanceOnRun ?? false,
       hypothesisConfig: body.hypothesisConfig ?? null,
+      kronosTickerUniverse: body.kronosTickerUniverse ?? [],
+      kronosRebalancePct: body.kronosRebalancePct != null ? String(body.kronosRebalancePct) : "50.00",
+      kronosMinSignalPct: body.kronosMinSignalPct != null ? String(body.kronosMinSignalPct) : "1.00",
     })
     .returning();
 

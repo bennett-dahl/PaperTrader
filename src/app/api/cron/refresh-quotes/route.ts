@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { holdings, watchlist, cachedQuotes } from "@/db/schema";
+import { holdings, watchlist, cachedQuotes, pipelines } from "@/db/schema";
 import { getFinnhubClient, fetchQuote } from "@/lib/finnhub";
+import { eq, and } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   // Protect with Authorization header (Vercel sets this automatically for cron jobs)
@@ -19,10 +20,25 @@ export async function GET(req: NextRequest) {
     .selectDistinct({ ticker: watchlist.ticker })
     .from(watchlist);
 
+  // Collect Kronos ticker universes from active kronos_rotation pipelines
+  const kronosPipelines = await db
+    .select({ kronosTickerUniverse: pipelines.kronosTickerUniverse })
+    .from(pipelines)
+    .where(
+      and(
+        eq(pipelines.status, "active"),
+        eq(pipelines.strategyType, "kronos_rotation")
+      )
+    );
+
+  const kronosTickers = kronosPipelines
+    .flatMap((p) => (p.kronosTickerUniverse as string[] | null) ?? []);
+
   const allTickers = [
     ...new Set([
       ...holdingTickers.map((h) => h.ticker),
       ...watchlistTickers.map((w) => w.ticker),
+      ...kronosTickers,
     ]),
   ];
 

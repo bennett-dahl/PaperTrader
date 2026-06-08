@@ -36,6 +36,9 @@ export interface PipelineConfigForPrompt {
   earningsLookbackDays: number;
   earningsForwardDays: number;
   minConfidenceThreshold: string;
+  // Kronos-specific (only populated for kronos_rotation)
+  kronosRebalancePct?: string | null;
+  kronosMinSignalPct?: string | null;
 }
 
 export function buildPrompt(
@@ -43,7 +46,8 @@ export function buildPrompt(
   tickers: string[],
   earningsMap: Map<string, EarningsSignal>,
   portfolioState: PortfolioStateForPrompt,
-  today: string
+  today: string,
+  kronosForecasts?: Array<{ ticker: string; predictedReturnPct: number }>
 ): string {
   const signalLines = tickers.map((ticker) => {
     const signal = earningsMap.get(ticker);
@@ -67,6 +71,38 @@ export function buildPrompt(
 
   const cashFloor = portfolioState.totalValue * (parseFloat(pipeline.minCashReservePct) / 100);
 
+  // --- Kronos forecast section (only for kronos_rotation) ---
+  let kronosSectionText = "";
+
+  if (kronosForecasts && kronosForecasts.length > 0) {
+    const rebalancePct = pipeline.kronosRebalancePct ?? "50";
+    const minSignalPct = parseFloat(pipeline.kronosMinSignalPct ?? "1.00");
+
+    const sortedForecasts = [...kronosForecasts].sort(
+      (a, b) => b.predictedReturnPct - a.predictedReturnPct
+    );
+
+    const forecastRows = sortedForecasts
+      .map(
+        (f) =>
+          `${f.ticker.padEnd(6)} | ${(f.predictedReturnPct >= 0 ? "+" : "") + f.predictedReturnPct.toFixed(2)}%`
+      )
+      .join("\n");
+
+    kronosSectionText = `
+## Kronos AI Forecasts (24h predicted return, sorted descending)
+Ticker | Predicted Return
+${forecastRows}
+
+Kronos signal rules:
+- BUY candidates: tickers with predicted return > +${minSignalPct}% (above threshold)
+- SELL candidates: tickers you currently hold with predicted return < -${minSignalPct}% (below negative threshold)
+- SELL instruction: aim to reduce the position by ~${rebalancePct}% (set sharesPct = ${rebalancePct} unless thesis warrants more/less)
+- Tickers with predicted return between -${minSignalPct}% and +${minSignalPct}% are neutral — treat as HOLD or SKIP unless earnings signals override
+- Kronos signals are the PRIMARY rotation signal; earnings signals are SECONDARY confirmation
+`;
+  }
+
   return `You are an autonomous AI investment strategy executor for a paper trading simulator. Today: ${today}.
 
 ## Investment Strategy
@@ -86,7 +122,7 @@ ${holdingLines.join("\n")}
 
 ## Earnings Signals (${pipeline.earningsLookbackDays}d lookback + ${pipeline.earningsForwardDays}d forward)
 ${signalLines.join("\n")}
-
+${kronosSectionText}
 ## Instructions
 Evaluate every ticker in the list above and return a decision for each.
 

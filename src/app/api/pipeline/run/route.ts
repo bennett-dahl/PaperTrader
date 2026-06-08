@@ -5,7 +5,8 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { db } from "@/db";
 import {
   pipelines, pipelineRuns, decisionLog, holdings,
-  portfolios, cachedQuotes, stockUniverse, pipelinePortfolios
+  portfolios, cachedQuotes, stockUniverse, pipelinePortfolios,
+  kronosForecasts as kronosForecastsTable,
 } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { fetchEarningsSignals } from "@/lib/earnings";
@@ -47,15 +48,21 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
   try {
     // Resolve ticker universe
     let tickers: string[];
-    if (pipeline.tickerUniverse.length > 0) {
-      tickers = pipeline.tickerUniverse;
-    } else {
-      const universe = await db
-        .select({ ticker: stockUniverse.ticker })
-        .from(stockUniverse)
-        .limit(50);
-      tickers = universe.map((u) => u.ticker);
-    }
+    const kronosTickers = (pipeline.kronosTickerUniverse as string[] | null) ?? [];
+    const baseTickers =
+      pipeline.tickerUniverse.length > 0
+        ? pipeline.tickerUniverse
+        : await db
+            .select({ ticker: stockUniverse.ticker })
+            .from(stockUniverse)
+            .limit(50)
+            .then((rows) => rows.map((u) => u.ticker));
+
+    // For kronos_rotation: evaluate the full union of both universes
+    tickers =
+      pipeline.strategyType === "kronos_rotation"
+        ? [...new Set([...baseTickers, ...kronosTickers])]
+        : baseTickers;
 
     // Fetch earnings signals (cache-first, Finnhub fallback)
     const earningsMap = await fetchEarningsSignals(
@@ -65,6 +72,38 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
     );
 
     const today = new Date().toISOString().split("T")[0];
+
+    // --- Kronos forecasts (kronos_rotation strategy only) ---
+    let kronosForecastData: Array<{ ticker: string; predictedReturnPct: number }> = [];
+
+    if (pipeline.strategyType === "kronos_rotation") {
+      const forecastRows = await db
+        .select({
+          ticker: kronosForecastsTable.ticker,
+          predictedReturnPct: kronosForecastsTable.predictedReturnPct,
+        })
+        .from(kronosForecastsTable)
+        .where(
+          and(
+            eq(kronosForecastsTable.pipelineId, pipelineId),
+            eq(kronosForecastsTable.forecastDate, today)
+          )
+        );
+
+      if (forecastRows.length === 0) {
+        console.warn(
+          `[pipeline/run] No Kronos forecasts for pipeline ${pipelineId} on ${today}. Continuing with earnings-only signals.`
+        );
+      } else {
+        kronosForecastData = forecastRows.map((r) => ({
+          ticker: r.ticker,
+          predictedReturnPct: parseFloat(r.predictedReturnPct),
+        }));
+        console.log(
+          `[pipeline/run] Loaded ${kronosForecastData.length} Kronos forecasts for pipeline ${pipelineId}`
+        );
+      }
+    }
     let totalExecuted = 0;
     let totalSkipped = 0;
     let totalFailed = 0;
@@ -107,7 +146,7 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
         const { object, usage } = await generateObject({
           model: anthropic("claude-3-5-haiku-20241022"),
           schema: decisionSchema,
-          prompt: buildPrompt(pipeline, tickers, earningsMap, portfolioState, today),
+          prompt: buildPrompt(pipeline, tickers, earningsMap, portfolioState, today, kronosForecastData),
         });
         aiOutput = object;
         totalInputTokens += usage.inputTokens ?? 0;

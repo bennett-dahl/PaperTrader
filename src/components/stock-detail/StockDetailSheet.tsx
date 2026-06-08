@@ -946,6 +946,12 @@ export function StockDetailSheet({
   const [detailData, setDetailData] = useState<StockDetailResponse | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
 
+  // Kronos forecast
+  const [kronosForecast, setKronosForecast] = useState<{
+    predictedReturnPct: number;
+    forecastDate: string;
+  } | null>(null);
+
   // Candles
   const [activeTimeframe, setActiveTimeframeState] = useState<Timeframe>("1D");
   const [candleStatus, setCandleStatus] = useState<LoadStatus>("idle");
@@ -1016,6 +1022,26 @@ export function StockDetailSheet({
     },
     [ticker]
   );
+
+  // Fetch Kronos forecast
+  useEffect(() => {
+    if (!open || !ticker) return;
+    setKronosForecast(null);
+    fetch(`/api/tickers/${encodeURIComponent(ticker)}/forecast`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (
+          data &&
+          typeof data.predictedReturnPct === "number" &&
+          typeof data.forecastDate === "string"
+        ) {
+          setKronosForecast(data);
+        } else {
+          setKronosForecast(null);
+        }
+      })
+      .catch(() => setKronosForecast(null));
+  }, [open, ticker]);
 
   // Fire fetches when sheet opens
   useEffect(() => {
@@ -1183,6 +1209,31 @@ export function StockDetailSheet({
                 <div className="h-4" />
               </>
             )}
+
+            {/* Kronos forecast — rendered independently from detail loading */}
+            {kronosForecast && (
+              <div className="px-4 mb-4">
+                <div className="bg-slate-900 rounded-xl px-4 border border-slate-800">
+                  <div className="flex justify-between items-center py-2.5 border-0">
+                    <span className="text-slate-400 text-sm">Kronos Forecast</span>
+                    <span
+                      className={`text-sm font-medium ${
+                        kronosForecast.predictedReturnPct >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {kronosForecast.predictedReturnPct >= 0 ? "+" : ""}
+                      {kronosForecast.predictedReturnPct.toFixed(2)}%
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({kronosForecast.forecastDate})
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Trade panel — sticky bottom */}

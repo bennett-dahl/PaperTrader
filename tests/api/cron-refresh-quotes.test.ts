@@ -7,6 +7,12 @@ import * as handler from "@/app/api/cron/refresh-quotes/route";
 
 beforeEach(() => {
   process.env.CRON_SECRET = "test-secret";
+  // Mock db.select for the Kronos ticker universe query added to this route
+  vi.mocked(db.select).mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue([]),
+    }),
+  } as any);
 });
 
 describe("GET /api/cron/refresh-quotes", () => {

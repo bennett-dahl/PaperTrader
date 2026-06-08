@@ -11,6 +11,9 @@ export const DEFAULT_PIPELINE_CONFIG = {
   allowShortSell: false,
   rebalanceOnRun: false,
   hypothesisConfig: null as string | null,
+  kronosTickerUniverse: [] as string[],
+  kronosRebalancePct: "50.00",
+  kronosMinSignalPct: "1.00",
 };
 
 export const INHERITABLE_FIELDS = [
@@ -19,6 +22,7 @@ export const INHERITABLE_FIELDS = [
   "earningsLookbackDays", "earningsForwardDays",
   "minConfidenceThreshold", "autonomous", "allowShortSell",
   "rebalanceOnRun", "hypothesisConfig",
+  "kronosTickerUniverse", "kronosRebalancePct", "kronosMinSignalPct",
 ] as const;
 
 export type InheritableField = typeof INHERITABLE_FIELDS[number];
