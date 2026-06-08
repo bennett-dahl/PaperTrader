@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
     "thesis", "strategyType", "tickerUniverse", "maxPositions",
     "maxPositionPct", "minCashReservePct", "earningsLookbackDays", "earningsForwardDays",
     "minConfidenceThreshold", "autonomous", "allowShortSell", "rebalanceOnRun", "hypothesisConfig",
+    "kronosTickerUniverse", "kronosRebalancePct", "kronosMinSignalPct",
   ];
   for (const f of inputFields) {
     if (f in body && body[f] !== undefined) userInput[f] = body[f];
@@ -118,6 +119,9 @@ export async function POST(req: NextRequest) {
       allowShortSell: resolved.allowShortSell,
       rebalanceOnRun: resolved.rebalanceOnRun,
       hypothesisConfig: resolved.hypothesisConfig,
+      kronosTickerUniverse: (resolved.kronosTickerUniverse as string[]) ?? [],
+      kronosRebalancePct: resolved.kronosRebalancePct ? String(resolved.kronosRebalancePct) : "50.00",
+      kronosMinSignalPct: resolved.kronosMinSignalPct ? String(resolved.kronosMinSignalPct) : "1.00",
       configOverrides: overrides,
     })
     .returning();
