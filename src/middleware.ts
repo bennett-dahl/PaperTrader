@@ -5,10 +5,13 @@ import type { NextRequest } from "next/server";
 export default auth((req: NextRequest & { auth: unknown }) => {
   const { pathname } = req.nextUrl;
 
-  // Public routes
+  // Public routes (no session required)
   const isPublic =
     pathname === "/" ||
-    pathname.startsWith("/api/auth/");
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/admin/") ||
+    pathname.startsWith("/api/tickers/") ||
+    pathname.startsWith("/api/pipeline/kronos-prefetch");
 
   if (!req.auth && !isPublic) {
     const signInUrl = new URL("/", req.nextUrl.origin);
