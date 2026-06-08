@@ -11,7 +11,8 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/api/admin/") ||
     pathname.startsWith("/api/tickers/") ||
-    pathname.startsWith("/api/pipeline/kronos-prefetch");
+    pathname.startsWith("/api/pipeline/kronos-prefetch") ||
+    pathname.startsWith("/api/pipeline/run");
 
   if (!req.auth && !isPublic) {
     const signInUrl = new URL("/", req.nextUrl.origin);
