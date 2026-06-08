@@ -144,7 +144,7 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       let aiOutput: AIDecisionOutput;
       try {
         const { object, usage } = await generateObject({
-          model: anthropic("claude-3-5-haiku-20241022"),
+          model: anthropic("claude-haiku-4-5"),
           schema: decisionSchema,
           prompt: buildPrompt(pipeline, tickers, earningsMap, portfolioState, today, kronosForecastData),
         });
