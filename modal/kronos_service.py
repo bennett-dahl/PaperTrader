@@ -1,27 +1,18 @@
 """
-modal/kronos_service.py
+Kronos-base inference service for PaperTrader.
 
-Kronos-base (NeoQuasar/Kronos-base, 102M params) inference service.
-Fetches OHLCV via yfinance, runs 24h return forecast, returns sorted results.
-
-Deploy:
-  modal deploy modal/kronos_service.py
-
-Endpoint:
-  POST /forecast_endpoint
-  Authorization: Bearer <KRONOS_SECRET>
-  Body: {"tickers": [...], "lookback": 60, "pipeline_id": "..."}
+Fetches OHLCV data via yfinance, runs Kronos-base forecasting using the
+official KronosPredictor API, and returns ranked 24h predicted returns.
 """
 
-import json
 import os
-
 import modal
 
 app = modal.App("kronos-forecaster")
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
+    .apt_install("git")
     .pip_install(
         "torch",
         "transformers",
@@ -30,86 +21,18 @@ image = (
         "pandas",
         "numpy",
         "fastapi",
+        "einops",
+    )
+    .run_commands(
+        "git clone https://github.com/shiyu-coder/Kronos.git /kronos",
+        "pip install -r /kronos/requirements.txt || true",
     )
 )
 
-# Secret must be created in Modal dashboard:
-#   modal secret create kronos-secret KRONOS_SECRET=<hex>
 kronos_secret = modal.Secret.from_name("kronos-secret")
 
 MODEL_NAME = "NeoQuasar/Kronos-base"
-
-
-def _load_model():
-    """Download and cache Kronos-base from HuggingFace. Called once per container."""
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
-    import torch
-
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model = AutoModelForSequenceClassification.from_pretrained(
-        MODEL_NAME,
-        torch_dtype=torch.float32,
-    )
-    model.eval()
-    return tokenizer, model
-
-
-def _fetch_ohlcv(ticker: str, lookback: int) -> list[list[float]]:
-    """Fetch OHLCV data via yfinance. Returns list of [open, high, low, close, volume] rows."""
-    import yfinance as yf
-    import pandas as pd
-
-    df = yf.download(ticker, period=f"{lookback}d", interval="1d", progress=False)
-    if df.empty or len(df) < 5:
-        return []
-
-    rows = []
-    for _, row in df.iterrows():
-        rows.append([
-            float(row["Open"]),
-            float(row["High"]),
-            float(row["Low"]),
-            float(row["Close"]),
-            float(row["Volume"]),
-        ])
-    return rows[-lookback:]  # cap to lookback
-
-
-def _run_inference(tokenizer, model, ohlcv_rows: list[list[float]]) -> float:
-    """
-    Run Kronos inference on OHLCV rows.
-
-    Kronos-base expects a time-series input. We encode the close prices as a
-    sequence and use the model's regression head (or logit as a proxy) to
-    produce a predicted return signal.
-
-    NOTE: Adapt input encoding to match Kronos-base's actual expected format
-    once the model card is reviewed. The pattern below is a reasonable default
-    for time-series transformer models that accept text-encoded sequences.
-    """
-    import torch
-
-    closes = [row[3] for row in ohlcv_rows]
-    if len(closes) < 2:
-        return 0.0
-
-    # Encode as text sequence (common pattern for Kronos-style models)
-    sequence = " ".join(f"{c:.4f}" for c in closes)
-    inputs = tokenizer(
-        sequence,
-        return_tensors="pt",
-        truncation=True,
-        max_length=512,
-    )
-
-    with torch.no_grad():
-        outputs = model(**inputs)
-
-    # Use the first logit as a raw return signal proxy
-    # Calibrate scale: model outputs ~[-1, 1] range → interpret as predicted % return
-    logit = float(outputs.logits[0][0].item())
-    predicted_return_pct = logit * 5.0  # scale factor; tune empirically
-    return round(predicted_return_pct, 4)
+TOKENIZER_NAME = "NeoQuasar/Kronos-Tokenizer-base"
 
 
 @app.function(
@@ -117,39 +40,76 @@ def _run_inference(tokenizer, model, ohlcv_rows: list[list[float]]) -> float:
     secrets=[kronos_secret],
     gpu="any",
     timeout=300,
-    retries=1,
 )
-def run_kronos_forecast(
-    tickers: list[str],
-    lookback: int = 60,
-    pipeline_id: str = "",
-) -> dict:
+def run_kronos_forecast(tickers: list, lookback: int = 60, pipeline_id: str = "") -> dict:
     """
-    Core forecast function. Called by forecast_endpoint.
-
-    Args:
-        tickers: List of ticker symbols to forecast
-        lookback: Number of days of OHLCV history to use (default 60)
-        pipeline_id: Originating pipeline ID (for logging)
-
-    Returns:
-        {"results": [{"ticker": str, "predictedReturnPct": float}]}
-        sorted descending by predictedReturnPct
+    Run Kronos-base forecasting for a list of tickers.
+    Returns results sorted by predictedReturnPct descending.
     """
-    tokenizer, model = _load_model()
+    import sys
+    import pandas as pd
+    import yfinance as yf
+    import numpy as np
+    from datetime import datetime, timedelta
+
+    # Add Kronos repo to path
+    sys.path.insert(0, "/kronos")
+    from model import Kronos, KronosTokenizer, KronosPredictor
+
+    print(f"[kronos] Loading model: {MODEL_NAME}")
+    tokenizer = KronosTokenizer.from_pretrained(TOKENIZER_NAME)
+    model = Kronos.from_pretrained(MODEL_NAME)
+    predictor = KronosPredictor(model, tokenizer, max_context=512)
+    print("[kronos] Model loaded")
+
     results = []
+    today = datetime.utcnow().date()
+    predict_date = today + timedelta(days=1)
 
     for ticker in tickers:
         try:
-            ohlcv = _fetch_ohlcv(ticker, lookback)
-            if not ohlcv:
-                print(f"[kronos] No OHLCV data for {ticker}, skipping")
+            print(f"[kronos] Fetching OHLCV for {ticker}")
+            df = yf.download(ticker, period=f"{lookback}d", interval="1d", progress=False, auto_adjust=True)
+            if df.empty or len(df) < 5:
+                print(f"[kronos] Insufficient data for {ticker}")
                 continue
-            predicted = _run_inference(tokenizer, model, ohlcv)
-            results.append({"ticker": ticker, "predictedReturnPct": predicted})
-            print(f"[kronos] {ticker}: {predicted:+.4f}% (pipeline={pipeline_id})")
+
+            # Flatten multi-index columns from yfinance (e.g. ('Close','AAPL') -> 'close')
+            df.columns = [c[0].lower() if isinstance(c, tuple) else c.lower() for c in df.columns]
+            df = df[["open", "high", "low", "close"]].dropna()
+            df.index = pd.to_datetime(df.index)
+            timestamps = pd.Series(df.index)
+            df = df.reset_index(drop=True)
+
+            x_timestamp = timestamps
+            
+            # Predict next 1 day
+            last_ts = x_timestamp.iloc[-1]
+            y_timestamp = pd.Series([last_ts + pd.Timedelta(days=1)])
+
+            pred = predictor.predict(
+                df=df[["open", "high", "low", "close"]],
+                x_timestamp=x_timestamp,
+                y_timestamp=y_timestamp,
+                pred_len=1,
+            )
+
+            # pred should be a DataFrame or array with predicted close price
+            if hasattr(pred, "values"):
+                pred_close = float(pred.values.flatten()[0])
+            else:
+                pred_close = float(np.array(pred).flatten()[0])
+
+            current_close = float(df["close"].iloc[-1])
+            predicted_return_pct = ((pred_close - current_close) / current_close) * 100
+
+            print(f"[kronos] {ticker}: current={current_close:.2f} predicted={pred_close:.2f} return={predicted_return_pct:+.4f}%")
+            results.append({"ticker": ticker, "predictedReturnPct": round(predicted_return_pct, 4)})
+
         except Exception as e:
             print(f"[kronos] Error forecasting {ticker}: {e}")
+            import traceback
+            traceback.print_exc()
             continue
 
     results.sort(key=lambda r: r["predictedReturnPct"], reverse=True)
@@ -157,45 +117,25 @@ def run_kronos_forecast(
 
 
 @app.function(image=image, secrets=[kronos_secret])
-@modal.fastapi_endpoint(method="POST")
-async def forecast_endpoint(request: dict) -> dict:
-    """
-    HTTP POST entry point. Verifies bearer token, delegates to run_kronos_forecast.
+@modal.asgi_app()
+def fastapi_app():
+    from fastapi import FastAPI, Request
+    from fastapi.responses import JSONResponse
 
-    Expected body:
-      {
-        "tickers": ["AAPL", "MSFT", ...],
-        "lookback": 60,
-        "pipeline_id": "<uuid>"
-      }
+    web_app = FastAPI()
 
-    Returns:
-      {"results": [{"ticker": str, "predictedReturnPct": float}]}
-
-    Note: For Modal web endpoints, pass the full Request object from FastAPI
-    to access headers. The pattern below handles both dict and Request forms.
-    """
-    from fastapi import Request as FastAPIRequest
-
-    # When Modal passes a Request object, use .headers; otherwise fall back to dict
-    secret = os.environ.get("KRONOS_SECRET", "")
-
-    # Support both FastAPI Request and plain dict (for testing)
-    if hasattr(request, "headers"):
+    @web_app.post("/")
+    async def forecast(request: Request):
+        secret = os.environ.get("KRONOS_SECRET", "")
         auth_header = request.headers.get("authorization", "")
+        if not auth_header.startswith("Bearer ") or auth_header[7:] != secret:
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
         body = await request.json()
-    else:
-        auth_header = request.get("_headers", {}).get("authorization", "")
-        body = request
+        tickers = body.get("tickers", [])
+        lookback = int(body.get("lookback", 60))
+        pipeline_id = body.get("pipeline_id", "")
+        if not tickers:
+            return {"results": []}
+        return run_kronos_forecast.remote(tickers=tickers, lookback=lookback, pipeline_id=pipeline_id)
 
-    if not auth_header.startswith("Bearer ") or auth_header[7:] != secret:
-        return {"error": "Unauthorized"}
-
-    tickers = body.get("tickers", [])
-    lookback = int(body.get("lookback", 60))
-    pipeline_id = body.get("pipeline_id", "")
-
-    if not tickers:
-        return {"results": []}
-
-    return run_kronos_forecast.remote(tickers=tickers, lookback=lookback, pipeline_id=pipeline_id)
+    return web_app
