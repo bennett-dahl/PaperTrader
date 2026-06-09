@@ -23,9 +23,11 @@ export async function POST(
   if (!pipeline) return NextResponse.json({ error: "Pipeline not found" }, { status: 404 });
 
   const qstash = new QStashClient({ token: process.env.QSTASH_TOKEN! });
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXTAUTH_URL!;
+  // Use VERCEL_PROJECT_PRODUCTION_URL (production alias) so QStash can reach
+  // the endpoint without Vercel Deployment Protection blocking per-deployment URLs.
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.NEXTAUTH_URL ?? `https://${process.env.VERCEL_URL}`;
 
   await qstash.publishJSON({
     url: `${baseUrl}/api/pipeline/run`,

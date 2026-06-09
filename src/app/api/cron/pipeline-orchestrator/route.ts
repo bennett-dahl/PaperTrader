@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
     .where(eq(pipelines.status, "active"));
 
   const qstash = new QStashClient({ token: process.env.QSTASH_TOKEN! });
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXTAUTH_URL!;
+  // Use production URL to bypass per-deployment Vercel Protection
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.NEXTAUTH_URL ?? `https://${process.env.VERCEL_URL}`;
 
   const dispatched: string[] = [];
   const failed: string[] = [];
