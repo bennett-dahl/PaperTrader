@@ -12,6 +12,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { fetchEarningsSignals } from "@/lib/earnings";
 import { buildPrompt, decisionSchema, type AIDecisionOutput } from "@/lib/pipeline-prompt";
 import { executeTrade } from "@/lib/trade-executor";
+import { getFinnhubClient, fetchQuote } from "@/lib/finnhub";
 
 export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
   const startTime = Date.now();
@@ -237,10 +238,32 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
             const quote = await db.select().from(cachedQuotes)
               .where(eq(cachedQuotes.ticker, decision.ticker)).limit(1);
 
-            if (!quote[0]) {
+            let priceForCalc: number | null = quote[0] ? parseFloat(quote[0].price) : null;
+            if (!priceForCalc) {
+              // Cache miss — try Finnhub live
+              try {
+                const finnhubClient = getFinnhubClient();
+                const liveData = await fetchQuote(finnhubClient, decision.ticker);
+                if (liveData && liveData.c > 0) {
+                  priceForCalc = liveData.c;
+                  // Cache the fresh price
+                  await db.insert(cachedQuotes).values({
+                    ticker: decision.ticker,
+                    price: String(liveData.c),
+                    change: String(liveData.d ?? 0),
+                    changePercent: String(liveData.dp ?? 0),
+                  }).onConflictDoUpdate({
+                    target: cachedQuotes.ticker,
+                    set: { price: String(liveData.c), change: String(liveData.d ?? 0), changePercent: String(liveData.dp ?? 0) },
+                  });
+                }
+              } catch (_) { /* Finnhub failed */ }
+            }
+
+            if (!priceForCalc) {
               executionError = "no_price_data";
             } else {
-              priceAtDecision = parseFloat(quote[0].price);
+              priceAtDecision = priceForCalc;
               const currentHolding = holdingsWithValue.find((h) => h.ticker === decision.ticker);
               const existingValue = currentHolding?.marketValue ?? 0;
               const maxPositionValue = totalValue * (parseFloat(pipeline.maxPositionPct) / 100);
