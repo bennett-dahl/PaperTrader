@@ -46,6 +46,8 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
     throw err;
   }
 
+  let forecastsLoadedAt: Date | null = null;
+
   try {
     // Resolve ticker universe
     let tickers: string[];
@@ -82,6 +84,7 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
         .select({
           ticker: kronosForecastsTable.ticker,
           predictedReturnPct: kronosForecastsTable.predictedReturnPct,
+          createdAt: kronosForecastsTable.createdAt,
         })
         .from(kronosForecastsTable)
         .where(
@@ -100,6 +103,10 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
           ticker: r.ticker,
           predictedReturnPct: parseFloat(r.predictedReturnPct),
         }));
+        forecastsLoadedAt = forecastRows.reduce(
+          (max, r) => (r.createdAt > max ? r.createdAt : max),
+          forecastRows[0].createdAt
+        );
         console.log(
           `[pipeline/run] Loaded ${kronosForecastData.length} Kronos forecasts for pipeline ${pipelineId}`
         );
@@ -349,6 +356,10 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       inputTokens: totalInputTokens,
       outputTokens: totalOutputTokens,
       costUsd: String(costUsd),
+      forecastsLoadedAt: forecastsLoadedAt ?? null,
+      forecastToRunGapMs: forecastsLoadedAt
+        ? Math.round(new Date(run.startedAt).getTime() - forecastsLoadedAt.getTime())
+        : null,
     }).where(eq(pipelineRuns.id, run.id));
 
     const nextRun = new Date();
@@ -366,6 +377,10 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       completedAt: new Date(),
       durationMs: Date.now() - startTime,
       errorMessage: err instanceof Error ? err.message : "Unknown error",
+      forecastsLoadedAt: forecastsLoadedAt ?? null,
+      forecastToRunGapMs: forecastsLoadedAt
+        ? Math.round(new Date(run.startedAt).getTime() - forecastsLoadedAt.getTime())
+        : null,
     }).where(eq(pipelineRuns.id, run.id));
 
     return NextResponse.json({ error: "Pipeline run failed" }, { status: 500 });

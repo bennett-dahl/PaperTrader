@@ -71,6 +71,8 @@ const mockRun = {
   inputTokens: 1000,
   outputTokens: 500,
   costUsd: "0.015000",
+  forecastsLoadedAt: new Date("2025-06-01T11:55:00Z"),
+  forecastToRunGapMs: 300000,
 };
 
 const mockDecision = {
@@ -307,6 +309,8 @@ describe("GET /api/admin/pipelines/:id/runs", () => {
         expect(data.runs).toHaveLength(1);
         expect(data.total).toBe(1);
         expect(data.runs[0].id).toBe("run-uuid-1");
+        expect(data.runs[0].forecastsLoadedAt).toBeDefined();
+        expect(data.runs[0].forecastToRunGapMs).toBe(300000);
       },
     });
   });

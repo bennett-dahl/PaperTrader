@@ -284,6 +284,8 @@ export const pipelineRuns = pgTable("pipeline_runs", {
   inputTokens: integer("input_tokens").notNull().default(0),
   outputTokens: integer("output_tokens").notNull().default(0),
   costUsd: decimal("cost_usd", { precision: 10, scale: 6 }).notNull().default("0"),
+  forecastsLoadedAt: timestamp("forecasts_loaded_at"),
+  forecastToRunGapMs: integer("forecast_to_run_gap_ms"),
 });
 
 // Decision Log

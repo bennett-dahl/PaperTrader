@@ -265,6 +265,111 @@ describe("POST /api/pipeline/run — Kronos rotation branch", () => {
     });
   });
 
+  it("captures forecastsLoadedAt = max(createdAt) and forecastToRunGapMs on finalize", async () => {
+    const handler = await import("@/app/api/pipeline/run/route");
+
+    const startedAt = new Date("2026-06-11T15:00:00.000Z");
+    const earliest = new Date("2026-06-11T14:00:00.000Z");
+    const latest = new Date("2026-06-11T14:30:00.000Z");
+    const middle = new Date("2026-06-11T14:15:00.000Z");
+
+    const mockForecastRows = [
+      { ticker: "AAPL", predictedReturnPct: "2.5000", createdAt: earliest },
+      { ticker: "MSFT", predictedReturnPct: "-1.2000", createdAt: latest },
+      { ticker: "GOOG", predictedReturnPct: "1.0000", createdAt: middle },
+    ];
+
+    (db as any).query = {
+      pipelines: {
+        findFirst: vi.fn().mockResolvedValue(makeKronosPipeline()),
+      },
+    };
+
+    // First select returns forecast rows (with createdAt); rest return empty
+    vi.mocked(db.select)
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(mockForecastRows),
+        }),
+      } as any)
+      .mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      } as any);
+
+    vi.mocked(db.insert).mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ ...mockRun, startedAt }]),
+      }),
+    } as any);
+
+    const updateSetMock = vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue([]),
+    });
+    vi.mocked(db.update).mockReturnValue({ set: updateSetMock } as any);
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pipelineId: "pipeline-1" }),
+        });
+
+        const finalizeCall = updateSetMock.mock.calls.find(
+          (c) => c[0] && c[0].status === "completed"
+        );
+        expect(finalizeCall).toBeDefined();
+        const setArg = finalizeCall![0];
+        expect(setArg.forecastsLoadedAt).toEqual(latest);
+        expect(setArg.forecastToRunGapMs).toBe(
+          startedAt.getTime() - latest.getTime()
+        );
+      },
+    });
+  });
+
+  it("leaves forecastsLoadedAt and forecastToRunGapMs null when no forecasts exist", async () => {
+    const handler = await import("@/app/api/pipeline/run/route");
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    (db as any).query = {
+      pipelines: {
+        findFirst: vi.fn().mockResolvedValue(makeKronosPipeline()),
+      },
+    };
+
+    setupDbMocks([], []);
+
+    const updateSetMock = vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue([]),
+    });
+    vi.mocked(db.update).mockReturnValue({ set: updateSetMock } as any);
+
+    await testApiHandler({
+      appHandler: handler,
+      test: async ({ fetch }) => {
+        await fetch({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pipelineId: "pipeline-1" }),
+        });
+
+        const finalizeCall = updateSetMock.mock.calls.find(
+          (c) => c[0] && c[0].status === "completed"
+        );
+        expect(finalizeCall).toBeDefined();
+        const setArg = finalizeCall![0];
+        expect(setArg.forecastsLoadedAt).toBeNull();
+        expect(setArg.forecastToRunGapMs).toBeNull();
+      },
+    });
+
+    consoleSpy.mockRestore();
+  });
+
   it("builds tickers as union of tickerUniverse and kronosTickerUniverse for kronos_rotation", async () => {
     const handler = await import("@/app/api/pipeline/run/route");
 
