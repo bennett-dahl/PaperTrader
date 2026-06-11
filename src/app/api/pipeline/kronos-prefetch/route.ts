@@ -48,9 +48,9 @@ export const POST = verifySignatureAppRouter(async (_req: NextRequest) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${kronosSecret}`,
         },
         body: JSON.stringify({
-          api_key: kronosSecret,
           tickers,
           lookback: 60,
           pipeline_id: pipeline.id,
