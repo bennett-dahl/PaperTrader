@@ -85,7 +85,7 @@ export default function StrategyTemplatesPage() {
       )}
 
       {showCreate && (
-        <div className="mb-6 bg-slate-900 border border-slate-700/50 rounded-xl p-6">
+        <div className="mb-6 glass rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Create Template</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
@@ -94,7 +94,7 @@ export default function StrategyTemplatesPage() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full glass rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="e.g. Earnings Beat Momentum"
               />
             </div>
@@ -103,7 +103,7 @@ export default function StrategyTemplatesPage() {
               <input
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full glass rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Brief description..."
               />
             </div>
@@ -114,7 +114,7 @@ export default function StrategyTemplatesPage() {
                 rows={4}
                 value={formData.thesis}
                 onChange={(e) => setFormData({ ...formData, thesis: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full glass rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 placeholder="Describe the investment thesis in natural language..."
               />
             </div>
@@ -129,7 +129,7 @@ export default function StrategyTemplatesPage() {
               <button
                 type="button"
                 onClick={() => { setShowCreate(false); setFormData({ name: "", description: "", thesis: "" }); }}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg transition-colors"
+                className="px-4 py-2 bg-white/10 hover:bg-slate-600 text-slate-100 rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -141,9 +141,9 @@ export default function StrategyTemplatesPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-slate-900 rounded-xl p-6 animate-pulse">
-              <div className="h-5 bg-slate-700 rounded w-1/3 mb-2" />
-              <div className="h-4 bg-slate-800 rounded w-2/3" />
+            <div key={i} className="bg-white/5 rounded-xl p-6 animate-pulse">
+              <div className="h-5 bg-white/10 rounded w-1/3 mb-2" />
+              <div className="h-4 bg-white/5 rounded w-2/3" />
             </div>
           ))}
         </div>
@@ -155,12 +155,12 @@ export default function StrategyTemplatesPage() {
       ) : (
         <div className="space-y-3">
           {templates.map((t) => (
-            <div key={t.id} className="bg-slate-900 border border-slate-700/50 rounded-xl p-6">
+            <div key={t.id} className="glass rounded-xl p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-slate-100">{t.name}</h3>
-                    <span className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full">
+                    <span className="text-xs px-2 py-0.5 bg-white/10 text-slate-300 rounded-full">
                       {t.strategyType.replace("_", " ")}
                     </span>
                   </div>
@@ -193,7 +193,7 @@ export default function StrategyTemplatesPage() {
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(null)}
-                      className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm rounded-lg"
+                      className="px-3 py-1.5 bg-white/10 hover:bg-slate-600 text-slate-100 text-sm rounded-lg"
                     >
                       Cancel
                     </button>

@@ -51,7 +51,7 @@ export default function OnboardingFlow({ userId, userName }: OnboardingFlowProps
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
+    <div className="min-h-screen text-foreground flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         {step === 0 && (
           <div className="text-center space-y-6">
@@ -71,7 +71,7 @@ export default function OnboardingFlow({ userId, userName }: OnboardingFlowProps
             </div>
             <Button
               onClick={() => setStep(1)}
-              className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold text-base"
+              className="w-full h-12 bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow font-bold text-base"
             >
               Let's go →
             </Button>
@@ -94,7 +94,7 @@ export default function OnboardingFlow({ userId, userName }: OnboardingFlowProps
               </p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+            <div className="glass rounded-2xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Starting cash</span>
                 <span className="font-bold text-emerald-400">$5,000.00</span>
@@ -111,7 +111,7 @@ export default function OnboardingFlow({ userId, userName }: OnboardingFlowProps
 
             <Button
               onClick={() => setStep(2)}
-              className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold text-base"
+              className="w-full h-12 bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow font-bold text-base"
             >
               Got it! →
             </Button>
@@ -136,7 +136,7 @@ export default function OnboardingFlow({ userId, userName }: OnboardingFlowProps
               {SUGGESTED_STOCKS.map((stock) => (
                 <div
                   key={stock.ticker}
-                  className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center justify-between"
+                  className="glass rounded-xl px-4 py-3 flex items-center justify-between"
                 >
                   <div>
                     <p className="font-semibold">{stock.ticker}</p>
@@ -149,7 +149,7 @@ export default function OnboardingFlow({ userId, userName }: OnboardingFlowProps
 
             <Button
               onClick={() => setStep(3)}
-              className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold text-base"
+              className="w-full h-12 bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow font-bold text-base"
             >
               Create my portfolio →
             </Button>
@@ -171,14 +171,14 @@ export default function OnboardingFlow({ userId, userName }: OnboardingFlowProps
                 value={portfolioName}
                 onChange={(e) => setPortfolioName(e.target.value)}
                 placeholder="My First Portfolio"
-                className="bg-slate-900 border-slate-700 text-white h-12 text-center text-lg font-semibold"
+                className="bg-popover backdrop-blur-xl border-glass-border text-white h-12 text-center text-lg font-semibold"
               />
             </div>
 
             <Button
               onClick={handleCreate}
               disabled={loading || !portfolioName.trim()}
-              className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold text-base"
+              className="w-full h-12 bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow font-bold text-base"
             >
               {loading ? "Creating…" : "Start trading! 🚀"}
             </Button>
@@ -191,7 +191,7 @@ export default function OnboardingFlow({ userId, userName }: OnboardingFlowProps
             <div
               key={s}
               className={`h-1.5 rounded-full transition-all ${
-                s === step ? "w-6 bg-emerald-400" : "w-1.5 bg-slate-700"
+                s === step ? "w-6 bg-emerald-400" : "w-1.5 bg-white/10"
               }`}
             />
           ))}

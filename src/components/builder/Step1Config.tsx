@@ -141,7 +141,7 @@ export default function Step1Config({ portfolios, initialConfig, onSubmit }: Ste
         <div>
           <label className="text-slate-400 text-sm mb-1.5 block">Portfolio</label>
           <Select value={portfolioId} onValueChange={(v) => { if (v) setPortfolioId(v); }}>
-            <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+            <SelectTrigger className="bg-popover backdrop-blur-xl border-glass-border text-white">
               <SelectValue>{portfolios.find((p) => p.id === portfolioId)?.name ?? "Portfolio"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -242,7 +242,7 @@ export default function Step1Config({ portfolios, initialConfig, onSubmit }: Ste
               className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px] ${
                 categories.includes(cat.id)
                   ? "bg-emerald-500/20 border-emerald-500 text-emerald-300"
-                  : "bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500"
+                  : "bg-popover backdrop-blur-xl border-glass-border text-slate-400 hover:border-slate-500"
               }`}
             >
               {cat.label}
@@ -257,7 +257,7 @@ export default function Step1Config({ portfolios, initialConfig, onSubmit }: Ste
       </div>
 
       {/* Summary */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+      <div className="glass rounded-2xl p-4 space-y-2">
         <p className="text-sm font-medium text-slate-300">Summary</p>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
@@ -282,7 +282,7 @@ export default function Step1Config({ portfolios, initialConfig, onSubmit }: Ste
       <Button
         onClick={handleSubmit}
         disabled={!portfolioId || amount <= 0 || maxAmount <= 0}
-        className="w-full h-12 text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-900 min-h-[44px]"
+        className="w-full h-12 text-base font-bold bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow min-h-[44px]"
       >
         Get Suggestions
         <ChevronRight className="h-5 w-5 ml-1" />

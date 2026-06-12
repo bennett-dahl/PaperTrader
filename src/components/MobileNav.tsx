@@ -47,16 +47,18 @@ export default function MobileNav({ user }: MobileNavProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
-        className="inline-flex items-center justify-center text-slate-400 hover:text-white min-h-[44px] min-w-[44px] rounded-md transition-colors"
+        className="inline-flex items-center justify-center text-slate-400 hover:text-white min-h-[44px] min-w-[44px] rounded-xl transition-colors hover:bg-white/5"
       >
         <Menu className="h-5 w-5" />
         <span className="sr-only">Open menu</span>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] bg-slate-900 border-slate-800 p-0 flex flex-col">
+      <SheetContent side="left" className="w-[300px] glass border-glass-border p-0 flex flex-col">
         {/* Logo */}
-        <div className="flex items-center gap-2 px-6 py-5 border-b border-slate-800">
-          <TrendingUp className="h-6 w-6 text-emerald-400" />
-          <span className="text-xl font-bold text-white">PaperTrader</span>
+        <div className="flex items-center gap-2.5 px-6 py-5 border-b border-glass-border">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-400/10 shadow-glow-sm">
+            <TrendingUp className="h-5 w-5 text-emerald-400" />
+          </span>
+          <span className="text-lg font-semibold tracking-tight text-gradient">PaperTrader</span>
         </div>
 
         {/* Nav */}
@@ -68,23 +70,23 @@ export default function MobileNav({ user }: MobileNavProps) {
                 key={href}
                 href={href}
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors min-h-[44px] ${
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all min-h-[44px] ${
                   active
-                    ? "bg-emerald-500/10 text-emerald-400"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    ? "bg-emerald-400/10 text-emerald-400 shadow-glow-sm"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
                 }`}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
-                <span className="font-medium">{label}</span>
+                <span className="font-medium text-sm">{label}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* User section */}
-        <div className="border-t border-slate-800 p-4">
+        <div className="border-t border-glass-border p-4">
           <div className="flex items-center gap-3 mb-3">
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-8 w-8 ring-1 ring-glass-border">
               <AvatarImage src={user.image ?? undefined} />
               <AvatarFallback>{user.name?.charAt(0).toUpperCase() ?? "?"}</AvatarFallback>
             </Avatar>
@@ -95,7 +97,7 @@ export default function MobileNav({ user }: MobileNavProps) {
           </div>
           <button
             onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }); }}
-            className="flex items-center gap-2 text-slate-500 hover:text-white text-sm transition-colors w-full px-2 py-1.5 rounded-lg hover:bg-slate-800 min-h-[44px]"
+            className="flex items-center gap-2 text-slate-500 hover:text-white text-sm transition-colors w-full px-2 py-1.5 rounded-lg hover:bg-white/5 min-h-[44px]"
           >
             <LogOut className="h-4 w-4" />
             Sign out

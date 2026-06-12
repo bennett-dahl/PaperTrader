@@ -120,7 +120,7 @@ export default function PresetsPanel({ onApply, onClose, currentConfig }: Preset
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 space-y-4">
+    <div className="glass rounded-2xl p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <p className="font-semibold text-sm">Saved Presets</p>
@@ -151,7 +151,7 @@ export default function PresetsPanel({ onApply, onClose, currentConfig }: Preset
           {presets.map((preset) => (
             <div
               key={preset.id}
-              className="flex items-center justify-between bg-slate-800 rounded-xl px-3 py-2.5"
+              className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2.5"
             >
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{preset.name}</p>
@@ -209,7 +209,7 @@ export default function PresetsPanel({ onApply, onClose, currentConfig }: Preset
             value={savingName}
             onChange={(e) => setSavingName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            className="bg-slate-800 border-slate-700 text-white text-sm h-9"
+            className="bg-white/5 border-glass-border text-white text-sm h-9"
             autoFocus
           />
           <div className="flex gap-2">
@@ -217,7 +217,7 @@ export default function PresetsPanel({ onApply, onClose, currentConfig }: Preset
               size="sm"
               onClick={handleSave}
               disabled={saving}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 h-8 flex-1"
+              className="bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow h-8 flex-1"
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (
                 <>

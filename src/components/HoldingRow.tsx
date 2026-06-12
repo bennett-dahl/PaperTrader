@@ -42,23 +42,25 @@ export default function HoldingRow({
     <>
       <div
         onClick={() => setOpen(true)}
-        className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-4 cursor-pointer hover:border-slate-700 transition-colors active:bg-slate-800/50"
+        className="glass rounded-2xl px-4 py-4 cursor-pointer transition-all hover:bg-white/[0.07] active:scale-[0.99]"
       >
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="font-bold text-lg">{ticker}</p>
+            <p className="inline-flex items-center rounded-lg bg-white/5 px-2 py-0.5 font-mono text-sm font-semibold tracking-tight ring-1 ring-glass-border">
+              {ticker}
+            </p>
             {name && (
-              <p className="text-slate-500 text-xs mt-0.5 truncate max-w-[140px]">
+              <p className="text-slate-500 text-xs mt-1 truncate max-w-[140px]">
                 {name}
               </p>
             )}
-            <p className="text-slate-500 text-xs mt-0.5">
+            <p className="tabular text-slate-500 text-xs mt-1">
               {shares % 1 === 0 ? shares.toFixed(0) : shares.toFixed(4)} shares · avg $
               {avgCostBasis.toFixed(2)}
             </p>
           </div>
           <div className="text-right">
-            <p className="font-bold">
+            <p className="tabular font-semibold">
               $
               {currentValue.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
@@ -66,14 +68,14 @@ export default function HoldingRow({
               })}
             </p>
             {currentPrice != null && (
-              <p className="text-slate-400 text-xs mt-0.5">
+              <p className="tabular text-slate-400 text-xs mt-0.5">
                 ${currentPrice.toFixed(2)}/share
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-glass-border">
           <div className="flex items-center gap-1.5">
             {isUp ? (
               <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
@@ -81,7 +83,7 @@ export default function HoldingRow({
               <TrendingDown className="h-3.5 w-3.5 text-red-400" />
             )}
             <span
-              className={`text-sm font-semibold ${
+              className={`tabular text-sm font-semibold ${
                 isUp ? "text-emerald-400" : "text-red-400"
               }`}
             >
@@ -91,7 +93,7 @@ export default function HoldingRow({
           </div>
           {changePercent != null && (
             <span
-              className={`text-xs ${
+              className={`tabular text-xs ${
                 changePercent >= 0 ? "text-emerald-400" : "text-red-400"
               }`}
             >

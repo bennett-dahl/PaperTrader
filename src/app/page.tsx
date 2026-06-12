@@ -12,25 +12,27 @@ export default async function LandingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white">
+    <main className="relative min-h-screen text-foreground overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-6 w-6 text-emerald-400" />
-          <span className="text-xl font-bold">PaperTrader</span>
+      <header className="relative flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-400/10 shadow-glow-sm">
+            <TrendingUp className="h-5 w-5 text-emerald-400" />
+          </span>
+          <span className="text-lg font-semibold tracking-tight text-gradient">PaperTrader</span>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="flex flex-col items-center text-center px-6 pt-16 pb-24 max-w-2xl mx-auto">
-        <div className="inline-flex items-center gap-2 bg-emerald-400/10 text-emerald-400 text-sm font-medium px-3 py-1 rounded-full mb-6 border border-emerald-400/20">
+      <section className="relative flex flex-col items-center text-center px-6 pt-16 pb-24 max-w-2xl mx-auto">
+        <div className="inline-flex items-center gap-2 glass text-emerald-400 text-sm font-medium px-3 py-1 rounded-full mb-6 shadow-glow-sm">
           <Zap className="h-3.5 w-3.5" />
           Real market data. Zero real risk.
         </div>
 
-        <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight mb-6">
+        <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight leading-[1.05] mb-6">
           Learn to invest without{" "}
-          <span className="text-emerald-400">losing a cent</span>
+          <span className="text-gradient">losing a cent</span>
         </h1>
 
         <p className="text-slate-400 text-lg mb-10 leading-relaxed">
@@ -48,7 +50,7 @@ export default async function LandingPage() {
           <Button
             type="submit"
             size="lg"
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold text-base px-8 py-6 h-auto rounded-xl w-full sm:w-auto"
+            className="bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-base px-8 py-6 h-auto rounded-2xl w-full sm:w-auto shadow-glow"
           >
             Start Trading for Free →
           </Button>
@@ -60,7 +62,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto px-6 pb-24">
+      <section className="relative grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl mx-auto px-6 pb-24">
         {[
           {
             icon: Shield,
@@ -80,16 +82,18 @@ export default async function LandingPage() {
         ].map(({ icon: Icon, title, desc }) => (
           <div
             key={title}
-            className="bg-slate-800/60 border border-slate-700 rounded-2xl p-6"
+            className="glass rounded-3xl p-6 transition-transform hover:-translate-y-1"
           >
-            <Icon className="h-8 w-8 text-emerald-400 mb-4" />
-            <h3 className="font-semibold text-lg mb-2">{title}</h3>
+            <span className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/10 shadow-glow-sm">
+              <Icon className="h-6 w-6 text-emerald-400" />
+            </span>
+            <h3 className="font-semibold text-lg mb-2 tracking-tight">{title}</h3>
             <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
           </div>
         ))}
       </section>
 
-      <footer className="text-center text-slate-600 text-xs pb-8">
+      <footer className="relative text-center text-slate-600 text-xs pb-8">
         PaperTrader · Built for learning · Not financial advice
       </footer>
     </main>

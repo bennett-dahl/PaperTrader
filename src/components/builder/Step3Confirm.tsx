@@ -140,7 +140,7 @@ export default function Step3Confirm({
           {executeResults.results.map((r) => (
             <div
               key={r.ticker}
-              className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl px-4 py-3"
+              className="flex items-center justify-between glass rounded-xl px-4 py-3"
             >
               <div className="flex items-center gap-3">
                 {r.success ? (
@@ -166,7 +166,7 @@ export default function Step3Confirm({
         <div className="space-y-3">
           <Button
             onClick={() => router.push("/dashboard")}
-            className="w-full h-12 text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-900 min-h-[44px]"
+            className="w-full h-12 text-base font-bold bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow min-h-[44px]"
           >
             <LayoutDashboard className="h-5 w-5 mr-2" />
             View Portfolio
@@ -209,12 +209,12 @@ export default function Step3Confirm({
         {suggestions.map((s) => (
           <div
             key={s.ticker}
-            className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl px-4 py-3"
+            className="flex items-center justify-between glass rounded-xl px-4 py-3"
           >
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">{s.ticker}</span>
-                <Badge className="text-xs bg-slate-800 text-slate-500 hover:bg-slate-800 border-0">
+                <Badge className="text-xs bg-white/5 text-slate-500 hover:bg-white/5 border-0">
                   {s.sector}
                 </Badge>
               </div>
@@ -230,7 +230,7 @@ export default function Step3Confirm({
       </div>
 
       {/* Total */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <div className="glass rounded-2xl p-4">
         <div className="flex justify-between items-center">
           <span className="text-slate-400">Total cost</span>
           <span className="text-2xl font-bold text-red-400">-${totalAmount.toFixed(2)}</span>
@@ -244,7 +244,7 @@ export default function Step3Confirm({
       <Button
         onClick={handleBuyAll}
         disabled={executing}
-        className="w-full h-12 text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-900 min-h-[44px]"
+        className="w-full h-12 text-base font-bold bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow min-h-[44px]"
       >
         {executing ? (
           <>

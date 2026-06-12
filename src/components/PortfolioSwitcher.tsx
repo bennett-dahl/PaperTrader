@@ -59,7 +59,7 @@ export default function PortfolioSwitcher({
         }
       }}
     >
-      <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200 text-sm h-8 w-auto">
+      <SelectTrigger className="bg-white/5 border-glass-border text-slate-200 text-sm h-8 w-auto">
         <SelectValue>{portfolios.find((p) => p.id === selectedId)?.name ?? "Portfolio"}</SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -68,7 +68,7 @@ export default function PortfolioSwitcher({
             {p.name}
           </SelectItem>
         ))}
-        <SelectItem value="__new__" className="text-slate-400 border-t border-slate-700 mt-1 pt-1">
+        <SelectItem value="__new__" className="text-slate-400 border-t border-glass-border mt-1 pt-1">
           ＋ New Portfolio
         </SelectItem>
       </SelectContent>

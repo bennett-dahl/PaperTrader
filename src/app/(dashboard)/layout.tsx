@@ -1,9 +1,11 @@
 import { auth } from "@/auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { portfolios, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import MobileNav from "@/components/MobileNav";
+import MobileTabBar from "@/components/MobileTabBar";
 import Sidebar from "@/components/Sidebar";
 import { TrendingUp } from "lucide-react";
 import { ActivePortfolioProvider } from "@/contexts/ActivePortfolioContext";
@@ -38,34 +40,39 @@ export default async function DashboardLayout({
 
   return (
     <ActivePortfolioProvider defaultPortfolioId={defaultPortfolio.id}>
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col sm:flex-row">
+      <div className="min-h-screen text-foreground flex flex-col sm:flex-row">
         {/* Desktop sidebar */}
         <Sidebar user={session.user} />
 
         {/* Main content */}
-        <main className="flex-1 pb-4 sm:pb-0 sm:pl-64 min-h-screen">
-          {/* Mobile header */}
-          <header className="flex items-center justify-between px-4 py-3 border-b border-slate-800 sm:hidden sticky top-0 bg-slate-950/95 backdrop-blur z-10">
+        <main className="flex-1 min-h-screen sm:pl-64">
+          {/* Mobile header — glass, hairline border, minimal height */}
+          <header className="flex items-center justify-between gap-3 px-4 py-2.5 sm:hidden sticky top-0 z-20 glass border-b border-glass-border">
+            <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-400/10 shadow-glow-sm">
+                <TrendingUp className="h-4 w-4 text-emerald-400" />
+              </span>
+              <span className="font-semibold text-base tracking-tight">PaperTrader</span>
+            </Link>
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-emerald-400" />
-              <span className="font-bold text-lg">PaperTrader</span>
-            </div>
-            <div className="flex items-center gap-3">
               {session.user.image && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={session.user.image}
                   alt={session.user.name ?? "User"}
-                  className="h-8 w-8 rounded-full"
+                  className="h-8 w-8 rounded-full ring-1 ring-glass-border"
                 />
               )}
               <MobileNav user={session.user} />
             </div>
           </header>
 
-          <div className="p-4 sm:p-8">{children}</div>
+          {/* Bottom padding so the fixed tab bar never covers content */}
+          <div className="p-4 pb-28 sm:p-8 sm:pb-8">{children}</div>
         </main>
 
+        {/* Mobile bottom tab bar */}
+        <MobileTabBar />
       </div>
     </ActivePortfolioProvider>
   );

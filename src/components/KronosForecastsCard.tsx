@@ -52,7 +52,7 @@ export function KronosForecastsCard({
       <CardContent>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+            <tr className="text-left text-slate-500 text-xs uppercase tracking-wider border-b border-glass-border">
               <th className="pb-2">Ticker</th>
               <th className="pb-2">Predicted Return</th>
               <th className="pb-2">Signal</th>
@@ -60,7 +60,7 @@ export function KronosForecastsCard({
           </thead>
           <tbody>
             {forecasts.map((f) => (
-              <tr key={f.ticker} className="border-b border-slate-800 last:border-0">
+              <tr key={f.ticker} className="border-b border-glass-border last:border-0">
                 <td className="py-2 font-mono font-semibold text-slate-200">
                   {f.ticker}
                 </td>

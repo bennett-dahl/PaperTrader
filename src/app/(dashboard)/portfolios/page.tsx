@@ -73,7 +73,7 @@ export default async function PortfoliosPage() {
         {enriched.map((p) => (
           <div
             key={p.id}
-            className="bg-slate-900 border border-slate-800 rounded-2xl px-5 py-4 space-y-3"
+            className="glass rounded-2xl px-5 py-4 space-y-3"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

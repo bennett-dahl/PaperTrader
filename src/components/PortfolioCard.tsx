@@ -16,43 +16,59 @@ export default function PortfolioCard({
   const isUp = totalReturn >= 0;
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-5 space-y-4">
-      {/* Total value */}
-      <div>
-        <p className="text-slate-400 text-sm">Total Portfolio Value</p>
-        <p className="text-4xl font-extrabold mt-1">
-          ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
-        <div className="flex items-center gap-2 mt-2">
-          <span
-            className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
-              isUp
-                ? "bg-emerald-500/20 text-emerald-400"
-                : "bg-red-500/20 text-red-400"
-            }`}
-          >
-            {isUp ? "+" : ""}
-            {totalReturnPct.toFixed(2)}%
-          </span>
-          <span className={`text-sm ${isUp ? "text-emerald-400" : "text-red-400"}`}>
-            {isUp ? "+" : ""}${totalReturn.toFixed(2)} all time
-          </span>
-        </div>
-      </div>
+    // Gradient-border wrapper: 1px mint→violet ring via padded gradient.
+    <div
+      className="rounded-3xl p-px shadow-glass"
+      style={{
+        backgroundImage:
+          "linear-gradient(135deg, color-mix(in oklch, var(--positive) 55%, transparent), color-mix(in oklch, var(--chart-4) 45%, transparent) 55%, color-mix(in oklch, var(--chart-3) 35%, transparent))",
+      }}
+    >
+      <div className="relative overflow-hidden rounded-[calc(1.5rem-1px)] glass p-5 space-y-4 transition-transform active:scale-[0.995]">
+        {/* faint inner glow */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-16 -right-10 h-40 w-40 rounded-full opacity-40 blur-3xl"
+          style={{ background: "var(--positive)" }}
+        />
 
-      {/* Breakdown */}
-      <div className="flex gap-4 pt-2 border-t border-slate-700">
-        <div className="flex-1">
-          <p className="text-slate-500 text-xs">Cash</p>
-          <p className="font-semibold text-sm mt-0.5">
-            ${cashBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+        {/* Total value */}
+        <div className="relative">
+          <p className="text-slate-400 text-xs uppercase tracking-wider">Total Portfolio Value</p>
+          <p className="tabular mt-1.5 font-semibold tracking-tight leading-none text-[clamp(2.25rem,9vw,3rem)]">
+            ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <span
+              className={`tabular text-sm font-semibold px-2.5 py-1 rounded-full ${
+                isUp
+                  ? "bg-emerald-400/15 text-emerald-400 shadow-glow-sm"
+                  : "bg-red-500/15 text-red-400 shadow-glow-negative"
+              }`}
+            >
+              {isUp ? "+" : ""}
+              {totalReturnPct.toFixed(2)}%
+            </span>
+            <span className={`tabular text-sm ${isUp ? "text-emerald-400" : "text-red-400"}`}>
+              {isUp ? "+" : ""}${totalReturn.toFixed(2)} all time
+            </span>
+          </div>
         </div>
-        <div className="flex-1">
-          <p className="text-slate-500 text-xs">Invested</p>
-          <p className="font-semibold text-sm mt-0.5">
-            ${holdingsValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-          </p>
+
+        {/* Breakdown */}
+        <div className="relative flex gap-4 pt-3 border-t border-glass-border">
+          <div className="flex-1">
+            <p className="text-slate-500 text-xs uppercase tracking-wider">Cash</p>
+            <p className="tabular font-semibold text-sm mt-1">
+              ${cashBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div className="flex-1">
+            <p className="text-slate-500 text-xs uppercase tracking-wider">Invested</p>
+            <p className="tabular font-semibold text-sm mt-1">
+              ${holdingsValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            </p>
+          </div>
         </div>
       </div>
     </div>

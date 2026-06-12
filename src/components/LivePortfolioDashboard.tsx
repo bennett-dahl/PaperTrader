@@ -198,7 +198,7 @@ export default function LivePortfolioDashboard({
       <div>
         <h2 className="text-lg font-semibold mb-3">Holdings</h2>
         {holdings.length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+          <div className="glass rounded-2xl p-8 text-center">
             <p className="text-slate-400 mb-1">No holdings yet</p>
             <p className="text-slate-500 text-sm">
               Head to Trade to make your first buy

@@ -1,21 +1,22 @@
 @import "tailwindcss";
-
-html, body {
-  background-color: var(--background);
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-}
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* ───────────────────────────────────────────────────────────────────────────
+   PaperTrader — Futuristic fintech terminal theme
+   OLED black, glass surfaces, electric mint, hot coral. Dark-only by default.
+   The whole app derives from these CSS variables.
+   ─────────────────────────────────────────────────────────────────────────── */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-geist-sans);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -45,92 +46,286 @@ html, body {
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+
+  /* Semantic financial tokens — usable as text-positive, bg-positive/10, etc. */
+  --color-positive: var(--positive);
+  --color-positive-foreground: var(--positive-foreground);
+  --color-negative: var(--negative);
+  --color-negative-foreground: var(--negative-foreground);
+
+  /* Glass surface helpers */
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+
+  /* Brand palette overrides — re-tone built-in ramps to the futuristic theme.
+     Existing components lean heavily on slate, emerald, red and green ramps;
+     remapping them transforms the whole app cohesively without touching markup. */
+
+  /* slate → cold near-black neutrals with a faint blue cast */
+  --color-slate-950: oklch(0.13 0.015 260);
+  --color-slate-900: oklch(0.17 0.016 260);
+  --color-slate-800: oklch(0.23 0.018 260);
+  --color-slate-700: oklch(0.32 0.02 262);
+  --color-slate-600: oklch(0.45 0.02 264);
+  --color-slate-500: oklch(0.62 0.022 264);
+  --color-slate-400: oklch(0.74 0.02 264);
+  --color-slate-300: oklch(0.84 0.016 264);
+  --color-slate-200: oklch(0.9 0.012 264);
+  --color-slate-100: oklch(0.95 0.008 264);
+  --color-slate-50: oklch(0.98 0.004 264);
+
+  /* emerald → electric mint */
+  --color-emerald-300: oklch(0.9 0.15 165);
+  --color-emerald-400: oklch(0.85 0.17 165);
+  --color-emerald-500: oklch(0.78 0.17 166);
+  --color-emerald-600: oklch(0.68 0.15 167);
+
+  /* green → mint (forecast/positive alt) */
+  --color-green-400: oklch(0.85 0.17 165);
+  --color-green-500: oklch(0.78 0.17 166);
+  --color-green-600: oklch(0.72 0.16 166);
+
+  /* red → hot coral */
+  --color-red-300: oklch(0.78 0.17 22);
+  --color-red-400: oklch(0.72 0.19 21);
+  --color-red-500: oklch(0.66 0.2 20);
+  --color-red-600: oklch(0.6 0.2 20);
+
+  /* Radius — base 1rem, larger card feel */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
+  --radius-4xl: calc(var(--radius) + 24px);
+
+  /* Glow shadow utilities — shadow-glow, shadow-glow-negative */
+  --shadow-glow: 0 0 24px -2px oklch(0.85 0.17 165 / 0.35);
+  --shadow-glow-sm: 0 0 14px -2px oklch(0.85 0.17 165 / 0.3);
+  --shadow-glow-negative: 0 0 24px -2px oklch(0.72 0.19 21 / 0.32);
+  --shadow-glass: 0 8px 30px -12px oklch(0 0 0 / 0.6);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 1rem;
+
+  /* Near-black with a faint cold cast */
+  --background: oklch(0.13 0.015 260);
+  --foreground: oklch(0.97 0.005 260);
+
+  /* Glass surfaces — translucent white over the OLED base */
+  --card: oklch(1 0 0 / 0.045);
+  --card-foreground: oklch(0.97 0.005 260);
+  --popover: oklch(0.17 0.016 260 / 0.92);
+  --popover-foreground: oklch(0.97 0.005 260);
+
+  /* Primary = electric mint, dark text on top */
+  --primary: oklch(0.85 0.17 165);
+  --primary-foreground: oklch(0.16 0.02 200);
+
+  --secondary: oklch(1 0 0 / 0.06);
+  --secondary-foreground: oklch(0.97 0.005 260);
+
+  --muted: oklch(1 0 0 / 0.05);
+  --muted-foreground: oklch(0.72 0.02 264);
+
+  --accent: oklch(1 0 0 / 0.08);
+  --accent-foreground: oklch(0.97 0.005 260);
+
+  --destructive: oklch(0.7 0.19 21);
+
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.1);
+  --ring: oklch(0.85 0.17 165 / 0.6);
+
+  /* Financial semantics */
+  --positive: oklch(0.85 0.17 165);
+  --positive-foreground: oklch(0.16 0.02 200);
+  --negative: oklch(0.72 0.19 21);
+  --negative-foreground: oklch(0.98 0.01 20);
+
+  /* Glass helper colors */
+  --glass: oklch(1 0 0 / 0.045);
+  --glass-border: oklch(1 0 0 / 0.1);
+
+  /* Chart palette — mint, coral, cyan, violet, amber */
+  --chart-1: oklch(0.85 0.17 165);
+  --chart-2: oklch(0.72 0.19 21);
+  --chart-3: oklch(0.78 0.13 220);
+  --chart-4: oklch(0.7 0.16 295);
+  --chart-5: oklch(0.82 0.15 85);
+
+  /* Sidebar — glass panel */
+  --sidebar: oklch(0.15 0.016 260 / 0.7);
+  --sidebar-foreground: oklch(0.97 0.005 260);
+  --sidebar-primary: oklch(0.85 0.17 165);
+  --sidebar-primary-foreground: oklch(0.16 0.02 200);
+  --sidebar-accent: oklch(1 0 0 / 0.06);
+  --sidebar-accent-foreground: oklch(0.97 0.005 260);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+  --sidebar-ring: oklch(0.85 0.17 165 / 0.6);
 }
 
+/* Keep .dark identical to :root so any `dark:` variants stay consistent. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.13 0.015 260);
+  --foreground: oklch(0.97 0.005 260);
+  --card: oklch(1 0 0 / 0.045);
+  --card-foreground: oklch(0.97 0.005 260);
+  --popover: oklch(0.17 0.016 260 / 0.92);
+  --popover-foreground: oklch(0.97 0.005 260);
+  --primary: oklch(0.85 0.17 165);
+  --primary-foreground: oklch(0.16 0.02 200);
+  --secondary: oklch(1 0 0 / 0.06);
+  --secondary-foreground: oklch(0.97 0.005 260);
+  --muted: oklch(1 0 0 / 0.05);
+  --muted-foreground: oklch(0.72 0.02 264);
+  --accent: oklch(1 0 0 / 0.08);
+  --accent-foreground: oklch(0.97 0.005 260);
+  --destructive: oklch(0.7 0.19 21);
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.1);
+  --ring: oklch(0.85 0.17 165 / 0.6);
+  --positive: oklch(0.85 0.17 165);
+  --positive-foreground: oklch(0.16 0.02 200);
+  --negative: oklch(0.72 0.19 21);
+  --negative-foreground: oklch(0.98 0.01 20);
+  --glass: oklch(1 0 0 / 0.045);
+  --glass-border: oklch(1 0 0 / 0.1);
+  --chart-1: oklch(0.85 0.17 165);
+  --chart-2: oklch(0.72 0.19 21);
+  --chart-3: oklch(0.78 0.13 220);
+  --chart-4: oklch(0.7 0.16 295);
+  --chart-5: oklch(0.82 0.15 85);
+  --sidebar: oklch(0.15 0.016 260 / 0.7);
+  --sidebar-foreground: oklch(0.97 0.005 260);
+  --sidebar-primary: oklch(0.85 0.17 165);
+  --sidebar-primary-foreground: oklch(0.16 0.02 200);
+  --sidebar-accent: oklch(1 0 0 / 0.06);
+  --sidebar-accent-foreground: oklch(0.97 0.005 260);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+  --sidebar-ring: oklch(0.85 0.17 165 / 0.6);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body {
+    background-color: var(--background);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    position: relative;
+    min-height: 100dvh;
+  }
+
+  /* Ambient background — fixed radial gradients + ultra-subtle grid.
+     Pure CSS, GPU-cheap, sits behind all content and never harms contrast. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        60rem 60rem at 12% -8%,
+        oklch(0.85 0.17 165 / 0.07),
+        transparent 60%
+      ),
+      radial-gradient(
+        55rem 55rem at 110% 8%,
+        oklch(0.7 0.16 295 / 0.06),
+        transparent 55%
+      ),
+      radial-gradient(
+        70rem 50rem at 50% 120%,
+        oklch(0.78 0.13 220 / 0.05),
+        transparent 60%
+      );
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image:
+      linear-gradient(oklch(1 0 0 / 0.018) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(1 0 0 / 0.018) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(
+      80rem 60rem at 50% 0%,
+      black,
+      transparent 75%
+    );
+    mask-image: radial-gradient(
+      80rem 60rem at 50% 0%,
+      black,
+      transparent 75%
+    );
+  }
+
+  /* Tabular numerals for financial figures. Apply `.tabular` to money values;
+     also auto-applied to monospace runs which are almost always numeric here. */
+  .tabular,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  /* Reusable glass surface. Translucent fill + blur + hairline border. */
+  .glass {
+    background-color: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+  }
+
+  /* Gradient text helper — mint → cyan. */
+  .text-gradient {
+    background-image: linear-gradient(
+      100deg,
+      oklch(0.92 0.15 165),
+      oklch(0.85 0.13 200) 60%,
+      oklch(0.8 0.13 230)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* Respect reduced motion for anything beyond simple transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

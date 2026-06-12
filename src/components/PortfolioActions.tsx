@@ -84,7 +84,7 @@ export default function PortfolioActions({
 
   return (
     <>
-      <div className="flex items-center gap-2 pt-1 border-t border-slate-800">
+      <div className="flex items-center gap-2 pt-1 border-t border-glass-border">
         <Button
           variant="ghost"
           size="sm"
@@ -113,7 +113,7 @@ export default function PortfolioActions({
 
       {/* Rename Dialog */}
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-white">
+        <DialogContent className="bg-popover backdrop-blur-xl border-glass-border text-white">
           <DialogHeader><DialogTitle>Rename Portfolio</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             <Input
@@ -121,14 +121,14 @@ export default function PortfolioActions({
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleRename()}
               placeholder="Portfolio name"
-              className="bg-slate-800 border-slate-700 text-white"
+              className="bg-white/5 border-glass-border text-white"
             />
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setRenameOpen(false)} className="flex-1">Cancel</Button>
               <Button
                 onClick={handleRename}
                 disabled={loading || !newName.trim() || newName.trim() === portfolioName}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold"
+                className="flex-1 bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow font-bold"
               >
                 {loading ? "Saving…" : "Save"}
               </Button>
@@ -139,7 +139,7 @@ export default function PortfolioActions({
 
       {/* Adjust Cash Dialog */}
       <Dialog open={cashOpen} onOpenChange={setCashOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-white">
+        <DialogContent className="bg-popover backdrop-blur-xl border-glass-border text-white">
           <DialogHeader><DialogTitle>Adjust Cash Balance</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             <p className="text-slate-400 text-sm">
@@ -153,7 +153,7 @@ export default function PortfolioActions({
                 step={100}
                 value={newCash}
                 onChange={(e) => setNewCash(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white pl-7"
+                className="bg-white/5 border-glass-border text-white pl-7"
               />
             </div>
             <div className="flex gap-2">
@@ -161,7 +161,7 @@ export default function PortfolioActions({
               <Button
                 onClick={handleAdjustCash}
                 disabled={loading || newCash === "" || parseFloat(newCash) < 0}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold"
+                className="flex-1 bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow font-bold"
               >
                 {loading ? "Saving…" : "Update Cash"}
               </Button>
@@ -172,7 +172,7 @@ export default function PortfolioActions({
 
       {/* Delete Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-white">
+        <DialogContent className="bg-popover backdrop-blur-xl border-glass-border text-white">
           <DialogHeader><DialogTitle>Delete Portfolio</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             {holdingsCount > 0 ? (

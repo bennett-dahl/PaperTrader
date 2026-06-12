@@ -188,7 +188,7 @@ interface StatItem {
 function DragHandle() {
   return (
     <div className="flex justify-center pt-2 pb-1">
-      <div className="w-10 h-1 rounded-full bg-slate-700" />
+      <div className="w-10 h-1 rounded-full bg-white/15" />
     </div>
   );
 }
@@ -211,7 +211,7 @@ function PositionBanner({
   const isUp = pnl >= 0;
 
   return (
-    <div className="mx-4 mb-3 bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5">
+    <div className="mx-4 mb-3 glass rounded-xl px-4 py-2.5">
       <div className="flex items-center justify-between text-sm flex-wrap gap-2">
         <span className="text-slate-400">
           <span className="text-white font-semibold">
@@ -261,9 +261,9 @@ function ChartTooltipContent({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const point: ChartPoint = payload[0].payload;
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 shadow-xl text-sm pointer-events-none">
-      <p className="font-bold text-white">{fmtPrice(point.close)}</p>
-      <p className="text-slate-400 text-xs">
+    <div className="glass rounded-xl px-3 py-2 shadow-glass text-sm pointer-events-none">
+      <p className="tabular font-semibold text-white">{fmtPrice(point.close)}</p>
+      <p className="tabular text-slate-400 text-xs">
         {new Date(point.timestamp).toLocaleString("en-US", {
           month: "short",
           day: "numeric",
@@ -299,7 +299,7 @@ function PriceChartSection({
     chartData.length >= 2
       ? chartData[chartData.length - 1].close >= chartData[0].close
       : true;
-  const chartColor = isUp ? "#10b981" : "#ef4444";
+  const chartColor = isUp ? "var(--positive)" : "var(--negative)";
   const currentPrice = quote?.currentPrice;
   const changePercent = quote?.changePercent;
   const change = quote?.change;
@@ -311,13 +311,13 @@ function PriceChartSection({
       {/* Price header */}
       <div className="mb-3">
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold text-white">
+          <span className="tabular text-3xl font-semibold text-white tracking-tight">
             {currentPrice != null ? fmtPrice(currentPrice) : "—"}
           </span>
           {changePercent != null && change != null && (
             <span
               className={cn(
-                "text-sm font-semibold",
+                "tabular text-sm font-semibold",
                 changePercent >= 0 ? "text-emerald-400" : "text-red-400"
               )}
             >
@@ -333,7 +333,7 @@ function PriceChartSection({
       {/* Chart area */}
       <div className="h-36 w-full">
         {candleStatus === "loading" ? (
-          <div className="h-full w-full bg-slate-800/40 rounded-xl animate-pulse" />
+          <div className="h-full w-full bg-white/5 rounded-xl animate-pulse" />
         ) : candleStatus === "error" ? (
           <div className="h-full flex flex-col items-center justify-center gap-2">
             <p className="text-slate-500 text-sm">{candleError ?? "Chart unavailable"}</p>
@@ -381,9 +381,9 @@ function PriceChartSection({
             key={tf}
             onClick={() => setActiveTimeframe(tf)}
             className={cn(
-              "flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors",
+              "tabular flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors",
               activeTimeframe === tf
-                ? "bg-slate-700 text-white"
+                ? "bg-white/10 text-white"
                 : "text-slate-500 hover:text-slate-300"
             )}
           >
@@ -399,9 +399,9 @@ function PriceChartSection({
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between items-center py-2.5 border-b border-slate-800 last:border-0">
+    <div className="flex justify-between items-center py-2.5 border-b border-glass-border last:border-0">
       <span className="text-slate-400 text-sm">{label}</span>
-      <span className="text-white text-sm font-medium">{value}</span>
+      <span className="tabular text-white text-sm font-medium">{value}</span>
     </div>
   );
 }
@@ -472,13 +472,13 @@ function KeyStatsSection({
     <div className="px-4 mb-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-slate-300">Key Stats</h3>
-        <div className="flex rounded-lg overflow-hidden border border-slate-700">
+        <div className="flex rounded-lg overflow-hidden border border-glass-border">
           <button
             onClick={() => setMode("simple")}
             className={cn(
               "px-3 py-1 text-xs font-medium transition-colors",
               mode === "simple"
-                ? "bg-slate-700 text-white"
+                ? "bg-white/10 text-white"
                 : "text-slate-500 hover:text-slate-300"
             )}
           >
@@ -489,7 +489,7 @@ function KeyStatsSection({
             className={cn(
               "px-3 py-1 text-xs font-medium transition-colors",
               mode === "advanced"
-                ? "bg-slate-700 text-white"
+                ? "bg-white/10 text-white"
                 : "text-slate-500 hover:text-slate-300"
             )}
           >
@@ -497,7 +497,7 @@ function KeyStatsSection({
           </button>
         </div>
       </div>
-      <div className="bg-slate-900 rounded-xl px-4 border border-slate-800">
+      <div className="glass rounded-xl px-4">
         {stats.map((s) => (
           <StatRow key={s.label} label={s.label} value={s.value} />
         ))}
@@ -540,7 +540,7 @@ function NewsSection({ ticker }: { ticker: string }) {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-16 bg-slate-800/40 rounded-xl animate-pulse"
+              className="h-16 bg-white/5 rounded-xl animate-pulse"
             />
           ))}
         </div>
@@ -564,7 +564,7 @@ function NewsSection({ ticker }: { ticker: string }) {
             <button
               key={item.id}
               onClick={() => window.open(item.url, "_blank", "noopener")}
-              className="w-full text-left bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 hover:border-slate-700 transition-colors"
+              className="w-full text-left glass rounded-xl px-4 py-3 transition-colors hover:bg-white/[0.07]"
             >
               <div className="flex gap-3">
                 {item.image && (
@@ -741,7 +741,7 @@ function TradePanel({
             onSwapIn?.(ticker);
             onClose();
           }}
-          className="w-full h-12 text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-900 min-h-[44px]"
+          className="w-full h-12 text-base font-bold bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow min-h-[44px]"
         >
           Swap In {ticker}
         </Button>
@@ -759,7 +759,7 @@ function TradePanel({
         <Button
           disabled={!detailReady}
           onClick={() => setTradeMode("buy")}
-          className="flex-1 h-12 text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-900 min-h-[44px]"
+          className="flex-1 h-12 text-base font-bold bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow min-h-[44px]"
         >
           Buy
         </Button>
@@ -768,7 +768,7 @@ function TradePanel({
             disabled={!detailReady}
             onClick={() => setTradeMode("sell")}
             variant="outline"
-            className="flex-1 h-12 text-base font-bold border-red-500/50 text-red-400 hover:bg-red-500/10 min-h-[44px]"
+            className="flex-1 h-12 text-base font-bold border-red-500/40 text-red-400 hover:bg-red-500/10 min-h-[44px]"
           >
             Sell
           </Button>
@@ -779,7 +779,7 @@ function TradePanel({
 
   // Trade form
   return (
-    <div className="px-4 pb-4 pt-2 bg-slate-900/80 border-t border-slate-800">
+    <div className="px-4 pb-4 pt-2 glass border-t border-glass-border">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-white capitalize">{tradeMode} {ticker}</h3>
         <button
@@ -807,7 +807,7 @@ function TradePanel({
                 setSharesInput(e.target.value);
                 setTradeError(null);
               }}
-              className="bg-slate-800 border-slate-700 text-white text-base h-11"
+              className="tabular bg-white/5 border-glass-border text-white text-base h-11"
               autoFocus
             />
             <span className="text-slate-500 text-sm whitespace-nowrap">
@@ -827,9 +827,9 @@ function TradePanel({
         </div>
 
         {estimatedTotal != null && (
-          <div className="bg-slate-800 rounded-xl px-4 py-2.5 flex justify-between items-center">
+          <div className="bg-white/5 rounded-xl px-4 py-2.5 flex justify-between items-center">
             <span className="text-slate-400 text-sm">Est. total</span>
-            <span className="font-bold">
+            <span className="tabular font-semibold">
               {fmtPrice(estimatedTotal)}
             </span>
           </div>
@@ -859,8 +859,8 @@ function TradePanel({
             className={cn(
               "flex-1 h-11 font-bold min-h-[44px]",
               tradeMode === "buy"
-                ? "bg-emerald-500 hover:bg-emerald-400 text-slate-900"
-                : "bg-red-500 hover:bg-red-400 text-white"
+                ? "bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow"
+                : "bg-red-500 hover:bg-red-400 text-white shadow-glow-negative"
             )}
           >
             {submitStatus === "submitting" ? (
@@ -897,7 +897,7 @@ function WatchlistHeart({
         "p-2 rounded-full transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center",
         disabled
           ? "opacity-50 cursor-not-allowed"
-          : "hover:bg-slate-800 active:scale-90"
+          : "hover:bg-white/10 active:scale-90"
       )}
       title={
         status === "error"
@@ -1085,7 +1085,7 @@ export function StockDetailSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="bg-slate-950 border-slate-800 rounded-t-3xl p-0 max-h-[92dvh] overflow-hidden flex flex-col"
+        className="bg-popover backdrop-blur-2xl border-glass-border rounded-t-3xl p-0 max-h-[92dvh] overflow-hidden flex flex-col"
       >
         {/* Swipe wrapper */}
         <div
@@ -1109,7 +1109,7 @@ export function StockDetailSheet({
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex-1 min-w-0 pr-2">
               <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold text-white">{ticker}</span>
+                <span className="font-mono text-xl font-semibold tracking-tight text-white">{ticker}</span>
                 {changePercent != null && (
                   <span
                     className={cn(
@@ -1138,7 +1138,7 @@ export function StockDetailSheet({
               />
               <button
                 onClick={onClose}
-                className="p-2 rounded-full text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-full text-slate-500 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1150,9 +1150,9 @@ export function StockDetailSheet({
             {/* Loading state for entire sheet */}
             {detailStatus === "loading" && !detailData && (
               <div className="px-4 mb-4">
-                <div className="h-12 bg-slate-800/40 rounded-xl animate-pulse mb-2" />
-                <div className="h-36 bg-slate-800/40 rounded-xl animate-pulse mb-2" />
-                <div className="h-32 bg-slate-800/40 rounded-xl animate-pulse" />
+                <div className="h-12 bg-white/5 rounded-xl animate-pulse mb-2" />
+                <div className="h-36 bg-white/5 rounded-xl animate-pulse mb-2" />
+                <div className="h-32 bg-white/5 rounded-xl animate-pulse" />
               </div>
             )}
 
@@ -1213,14 +1213,14 @@ export function StockDetailSheet({
             {/* Kronos forecast — rendered independently from detail loading */}
             {kronosForecast && (
               <div className="px-4 mb-4">
-                <div className="bg-slate-900 rounded-xl px-4 border border-slate-800">
+                <div className="glass rounded-xl px-4">
                   <div className="flex justify-between items-center py-2.5 border-0">
                     <span className="text-slate-400 text-sm">Kronos Forecast</span>
                     <span
-                      className={`text-sm font-medium ${
+                      className={`tabular text-sm font-medium ${
                         kronosForecast.predictedReturnPct >= 0
-                          ? "text-green-600"
-                          : "text-red-600"
+                          ? "text-emerald-400"
+                          : "text-red-400"
                       }`}
                     >
                       {kronosForecast.predictedReturnPct >= 0 ? "+" : ""}
@@ -1237,7 +1237,7 @@ export function StockDetailSheet({
           </div>
 
           {/* Trade panel — sticky bottom */}
-          <div className="border-t border-slate-800 bg-slate-950">
+          <div className="border-t border-glass-border bg-popover/80 backdrop-blur-xl">
             <TradePanel
               ticker={ticker}
               context={context}

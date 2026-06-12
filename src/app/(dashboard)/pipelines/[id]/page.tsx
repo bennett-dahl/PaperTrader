@@ -57,7 +57,7 @@ const ACTION_COLORS: Record<string, string> = {
   BUY: "text-green-400 bg-green-400/10",
   SELL: "text-red-400 bg-red-400/10",
   HOLD: "text-blue-400 bg-blue-400/10",
-  SKIP: "text-slate-400 bg-slate-700",
+  SKIP: "text-slate-400 bg-white/10",
 };
 
 function RunStatusIcon({ status }: { status: string }) {
@@ -167,8 +167,8 @@ export default function PipelineDetailPage() {
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto animate-pulse space-y-4">
-        <div className="h-8 bg-slate-800 rounded w-1/3" />
-        <div className="h-64 bg-slate-900 rounded-xl" />
+        <div className="h-8 bg-white/5 rounded w-1/3" />
+        <div className="h-64 bg-white/5 rounded-xl" />
       </div>
     );
   }
@@ -219,7 +219,7 @@ export default function PipelineDetailPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-slate-800">
+      <div className="flex gap-1 mb-6 border-b border-glass-border">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -238,7 +238,7 @@ export default function PipelineDetailPage() {
       {/* Overview */}
       {tab === "overview" && (
         <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-6">
+          <div className="glass rounded-xl p-6">
             <h2 className="font-semibold text-slate-100 mb-4">Configuration</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {[
@@ -262,7 +262,7 @@ export default function PipelineDetailPage() {
                 <p className="text-xs text-slate-500 mb-1">Ticker Universe</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(pipeline.tickerUniverse as string[]).map((t) => (
-                    <span key={t} className="px-2 py-0.5 bg-slate-700 text-slate-300 text-xs rounded">{t}</span>
+                    <span key={t} className="px-2 py-0.5 bg-white/10 text-slate-300 text-xs rounded">{t}</span>
                   ))}
                 </div>
               </div>
@@ -270,7 +270,7 @@ export default function PipelineDetailPage() {
           </div>
 
           {data.template && (
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-6">
+            <div className="glass rounded-xl p-6">
               <h2 className="font-semibold text-slate-100 mb-2">Template</h2>
               <p className="text-slate-300">{String((data.template as Record<string, unknown>).name)}</p>
               {Array.isArray(pipeline.configOverrides) && (pipeline.configOverrides as string[]).length > 0 && (
@@ -281,7 +281,7 @@ export default function PipelineDetailPage() {
             </div>
           )}
 
-          <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-6">
+          <div className="glass rounded-xl p-6">
             <h2 className="font-semibold text-slate-100 mb-4">Assigned Portfolios</h2>
             {data.portfolios.length === 0 ? (
               <p className="text-slate-400 text-sm">No portfolios assigned.</p>
@@ -295,7 +295,7 @@ export default function PipelineDetailPage() {
                 </thead>
                 <tbody>
                   {data.portfolios.map(({ portfolio, allocationPct }) => (
-                    <tr key={String((portfolio as Record<string, unknown>).id)} className="border-t border-slate-800">
+                    <tr key={String((portfolio as Record<string, unknown>).id)} className="border-t border-glass-border">
                       <td className="py-2 text-slate-200">{String((portfolio as Record<string, unknown>).name)}</td>
                       <td className="py-2 text-slate-400">{allocationPct}%</td>
                     </tr>
@@ -309,12 +309,12 @@ export default function PipelineDetailPage() {
 
       {/* Run History */}
       {tab === "runs" && (
-        <div className="bg-slate-900 border border-slate-700/50 rounded-xl overflow-hidden">
+        <div className="glass rounded-xl overflow-hidden">
           {runs.length === 0 ? (
             <div className="p-8 text-center text-slate-400">No runs yet.</div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="border-b border-slate-800">
+              <thead className="border-b border-glass-border">
                 <tr className="text-left text-slate-500 text-xs uppercase tracking-wider">
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Triggered</th>
@@ -329,7 +329,7 @@ export default function PipelineDetailPage() {
               </thead>
               <tbody>
                 {runs.map((run) => (
-                  <tr key={run.id} className="border-t border-slate-800 hover:bg-slate-800/50">
+                  <tr key={run.id} className="border-t border-glass-border hover:bg-white/5/50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <RunStatusIcon status={run.status} />
@@ -352,7 +352,7 @@ export default function PipelineDetailPage() {
           {runs.length > 0 && (() => {
             const totalSpend = runs.reduce((s, r) => s + parseFloat(r.costUsd || "0"), 0);
             return totalSpend > 0 ? (
-              <div className="px-4 py-3 border-t border-slate-700 text-sm text-slate-400 flex gap-1">
+              <div className="px-4 py-3 border-t border-glass-border text-sm text-slate-400 flex gap-1">
                 <span>Total spend:</span>
                 <span className="text-slate-200 font-medium">{formatCostUsd(totalSpend)}</span>
               </div>
@@ -369,7 +369,7 @@ export default function PipelineDetailPage() {
               <select
                 value={selectedRunId ?? ""}
                 onChange={(e) => setSelectedRunId(e.target.value)}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="glass rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {runs.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -380,13 +380,13 @@ export default function PipelineDetailPage() {
             </div>
           )}
           {decisionsLoading ? (
-            <div className="bg-slate-900 rounded-xl p-8 text-center text-slate-400 animate-pulse">Loading decisions...</div>
+            <div className="bg-white/5 rounded-xl p-8 text-center text-slate-400 animate-pulse">Loading decisions...</div>
           ) : decisions.length === 0 ? (
-            <div className="bg-slate-900 rounded-xl p-8 text-center text-slate-400">No decisions for this run.</div>
+            <div className="bg-white/5 rounded-xl p-8 text-center text-slate-400">No decisions for this run.</div>
           ) : (
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl overflow-hidden">
+            <div className="glass rounded-xl overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="border-b border-slate-800">
+                <thead className="border-b border-glass-border">
                   <tr className="text-left text-slate-500 text-xs uppercase tracking-wider">
                     <th className="px-4 py-3">Ticker</th>
                     <th className="px-4 py-3">Action</th>
@@ -398,7 +398,7 @@ export default function PipelineDetailPage() {
                 </thead>
                 <tbody>
                   {decisions.map((d) => (
-                    <tr key={d.id} className="border-t border-slate-800">
+                    <tr key={d.id} className="border-t border-glass-border">
                       <td className="px-4 py-3 font-mono text-slate-200">{d.ticker}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ACTION_COLORS[d.action] ?? ""}`}>
@@ -447,7 +447,7 @@ export default function PipelineDetailPage() {
       {/* Settings */}
       {tab === "settings" && (
         <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-6">
+          <div className="glass rounded-xl p-6">
             <h2 className="font-semibold text-slate-100 mb-4">Status</h2>
             <div className="flex gap-3">
               {pipeline.status !== "active" && (
@@ -482,7 +482,7 @@ export default function PipelineDetailPage() {
               )}
             </div>
           </div>
-          <div className="bg-slate-900 border border-red-900/30 rounded-xl p-6">
+          <div className="glass border border-red-500/30 rounded-xl p-6">
             <h2 className="font-semibold text-red-400 mb-2">Danger Zone</h2>
             <p className="text-sm text-slate-400 mb-4">Pipelines with run history will be archived instead of deleted.</p>
             <button

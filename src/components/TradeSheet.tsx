@@ -48,7 +48,7 @@ export default function TradeSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="bg-slate-900 border-slate-700 rounded-t-3xl pb-8">
+      <SheetContent side="bottom" className="bg-popover backdrop-blur-xl border-glass-border rounded-t-3xl pb-8">
         <SheetHeader className="text-left mb-6">
           <SheetTitle className="text-white text-xl">
             {ticker}{" "}

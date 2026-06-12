@@ -43,7 +43,7 @@ export default async function HistoryPage() {
       </div>
 
       {txns.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+        <div className="glass rounded-2xl p-8 text-center">
           <p className="text-slate-400 mb-1">No transactions yet</p>
           <p className="text-slate-500 text-sm">
             Your trades will appear here after your first buy
@@ -56,7 +56,7 @@ export default async function HistoryPage() {
             return (
               <div
                 key={txn.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-4 flex items-center justify-between"
+                className="glass rounded-2xl px-4 py-4 flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
                   <Badge

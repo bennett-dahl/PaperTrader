@@ -124,7 +124,7 @@ export default async function DashboardPage({
       />
 
       {chartData.length > 1 && (
-        <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800">
+        <div className="glass rounded-2xl p-4">
           <h2 className="text-sm font-medium text-slate-400 mb-4">
             Portfolio Value
           </h2>

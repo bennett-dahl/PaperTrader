@@ -157,7 +157,7 @@ export default function Step2Suggestions({ config, onBack, onConfirm }: Step2Sug
       </div>
 
       {/* Config summary */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex flex-wrap gap-3 text-sm">
+      <div className="glass rounded-xl px-4 py-3 flex flex-wrap gap-3 text-sm">
         <span className="text-slate-400">
           <span className="text-white font-semibold">${config.amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span> total
         </span>
@@ -197,7 +197,7 @@ export default function Step2Suggestions({ config, onBack, onConfirm }: Step2Sug
       {!loading && !error && (
         <div className="space-y-3">
           {suggestions.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+            <div className="glass rounded-2xl p-8 text-center">
               <p className="text-slate-400 mb-2">No suggestions found</p>
               <p className="text-slate-500 text-sm mb-4">Try broadening your category filters</p>
               <Button variant="ghost" onClick={onBack} className="text-slate-300">
@@ -221,13 +221,13 @@ export default function Step2Suggestions({ config, onBack, onConfirm }: Step2Sug
       {/* Footer actions */}
       {!loading && !error && suggestions.length > 0 && (
         <div className="space-y-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex justify-between items-center text-sm">
+          <div className="glass rounded-xl px-4 py-3 flex justify-between items-center text-sm">
             <span className="text-slate-400">Total investment</span>
             <span className="font-bold text-lg">${totalAllocated.toFixed(2)}</span>
           </div>
           <Button
             onClick={() => onConfirm(suggestions)}
-            className="w-full h-12 text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-900 min-h-[44px]"
+            className="w-full h-12 text-base font-bold bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow min-h-[44px]"
           >
             Review & Buy All
             <ChevronRight className="h-5 w-5 ml-1" />
@@ -270,14 +270,14 @@ function SuggestionCard({
 
   return (
     <div
-      className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-4 cursor-pointer hover:border-slate-700 transition-colors"
+      className="glass rounded-2xl px-4 py-4 cursor-pointer hover:border-glass-border transition-colors"
       onClick={onViewDetail}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-bold text-base">{item.ticker}</span>
-            <Badge className="text-xs bg-slate-800 text-slate-400 hover:bg-slate-800 border-0">
+            <Badge className="text-xs bg-white/5 text-slate-400 hover:bg-white/5 border-0">
               {item.sector}
             </Badge>
           </div>
@@ -294,7 +294,7 @@ function SuggestionCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-800">
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-glass-border">
         <span className={`text-xs font-medium capitalize ${riskColor}`}>
           {item.riskLevel} risk · {item.marketCap}-cap
         </span>
@@ -304,7 +304,7 @@ function SuggestionCard({
             onSwap();
           }}
           disabled={isSwapping}
-          className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-medium transition-colors disabled:opacity-50 min-h-[32px] px-2 py-1 rounded-lg hover:bg-slate-800"
+          className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-medium transition-colors disabled:opacity-50 min-h-[32px] px-2 py-1 rounded-lg hover:bg-white/5"
         >
           {isSwapping ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />

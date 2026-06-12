@@ -53,7 +53,7 @@ export default async function WatchlistPage() {
       </div>
 
       {watchlistItems.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+        <div className="glass rounded-2xl p-8 text-center">
           <p className="text-slate-400 mb-1">Your watchlist is empty</p>
           <p className="text-slate-500 text-sm">
             Add stocks from the Trade page to track them here
@@ -68,7 +68,7 @@ export default async function WatchlistPage() {
             return (
               <div
                 key={item.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-4 flex items-center justify-between min-h-[64px]"
+                className="glass rounded-2xl px-4 py-4 flex items-center justify-between min-h-[64px]"
               >
                 <div>
                   <p className="font-bold">{item.ticker}</p>

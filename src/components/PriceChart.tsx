@@ -1,13 +1,14 @@
 "use client";
 
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useId } from "react";
 
 interface ChartDataPoint {
   time: string;
@@ -22,8 +23,8 @@ interface PriceChartProps {
 function CustomTooltip({ active, payload }: any) {
   if (active && payload?.length) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm shadow-xl">
-        <p className="font-bold">
+      <div className="glass rounded-xl px-3 py-2 text-sm shadow-glass pointer-events-none">
+        <p className="tabular font-semibold">
           ${payload[0].value.toLocaleString("en-US", { minimumFractionDigits: 2 })}
         </p>
         <p className="text-slate-500 text-xs">{payload[0].payload.time}</p>
@@ -34,17 +35,25 @@ function CustomTooltip({ active, payload }: any) {
 }
 
 export default function PriceChart({ data }: PriceChartProps) {
+  const gradientId = useId();
   const min = Math.min(...data.map((d) => d.value));
   const max = Math.max(...data.map((d) => d.value));
   const padding = (max - min) * 0.05;
   const isUp = data[data.length - 1]?.value >= data[0]?.value;
+  const color = isUp ? "var(--positive)" : "var(--negative)";
 
   return (
     <ResponsiveContainer width="100%" height={160}>
-      <LineChart data={data}>
+      <AreaChart data={data} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
         <XAxis
           dataKey="time"
-          tick={{ fill: "#64748b", fontSize: 10 }}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
           axisLine={false}
           tickLine={false}
           interval="preserveStartEnd"
@@ -54,21 +63,22 @@ export default function PriceChart({ data }: PriceChartProps) {
           ticks={[min, max]}
           orientation="right"
           width={60}
-          tick={{ fill: "#64748b", fontSize: 10 }}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v: number) => `$${v.toFixed(2)}`}
         />
-        <Tooltip content={<CustomTooltip />} />
-        <Line
+        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--glass-border)" }} />
+        <Area
           type="monotone"
           dataKey="value"
-          stroke={isUp ? "#10b981" : "#ef4444"}
+          stroke={color}
           strokeWidth={2}
+          fill={`url(#${gradientId})`}
           dot={false}
-          activeDot={{ r: 4, fill: isUp ? "#10b981" : "#ef4444" }}
+          activeDot={{ r: 4, fill: color, strokeWidth: 0 }}
         />
-      </LineChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

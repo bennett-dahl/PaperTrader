@@ -46,7 +46,7 @@ function UsageSummaryCard({ pipelines }: { pipelines: PipelineListItem[] }) {
   const avgPerRun = totalRuns > 0 ? totalSpend / totalRuns : 0;
 
   return (
-    <div className="mb-6 bg-slate-900 border border-slate-700/50 rounded-xl p-4 flex items-center gap-6">
+    <div className="mb-6 glass rounded-xl p-4 flex items-center gap-6">
       <div>
         <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">AI Pipeline Spend — all time</p>
         <div className="flex items-baseline gap-4 flex-wrap">
@@ -137,8 +137,8 @@ export default function PipelinesPage() {
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-sm capitalize transition-colors ${
               filter === f
-                ? "bg-slate-700 text-slate-100"
-                : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                ? "bg-white/10 text-slate-100"
+                : "text-slate-400 hover:text-slate-100 hover:bg-white/5"
             }`}
           >
             {f}
@@ -149,9 +149,9 @@ export default function PipelinesPage() {
       {loading ? (
         <div className="grid gap-4">
           {[1, 2].map((i) => (
-            <div key={i} className="bg-slate-900 rounded-xl p-6 animate-pulse">
-              <div className="h-5 bg-slate-700 rounded w-1/3 mb-2" />
-              <div className="h-4 bg-slate-800 rounded w-2/3" />
+            <div key={i} className="bg-white/5 rounded-xl p-6 animate-pulse">
+              <div className="h-5 bg-white/10 rounded w-1/3 mb-2" />
+              <div className="h-4 bg-white/5 rounded w-2/3" />
             </div>
           ))}
         </div>
@@ -166,7 +166,7 @@ export default function PipelinesPage() {
       ) : (
         <div className="grid gap-4">
           {filtered.map((p) => (
-            <div key={p.id} className="bg-slate-900 border border-slate-700/50 rounded-xl p-6">
+            <div key={p.id} className="glass rounded-xl p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -230,7 +230,7 @@ export default function PipelinesPage() {
                   ) : null}
                   <Link
                     href={`/pipelines/${p.id}`}
-                    className="p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition-colors text-xs"
+                    className="p-2 text-slate-400 hover:text-slate-100 hover:bg-white/5 rounded-lg transition-colors text-xs"
                   >
                     View →
                   </Link>

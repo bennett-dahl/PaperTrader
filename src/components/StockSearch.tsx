@@ -60,7 +60,7 @@ export default function StockSearch({ onSelect }: StockSearchProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
-          className="pl-10 bg-slate-900 border-slate-700 text-white h-12 min-h-[44px]"
+          className="pl-10 bg-popover backdrop-blur-xl border-glass-border text-white h-12 min-h-[44px]"
         />
         {loading && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 animate-spin" />
@@ -68,11 +68,11 @@ export default function StockSearch({ onSelect }: StockSearchProps) {
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-xl overflow-hidden z-50 shadow-xl">
+        <div className="absolute top-full left-0 right-0 mt-1 glass rounded-xl overflow-hidden z-50 shadow-xl">
           {results.map((result) => (
             <button
               key={result.symbol}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800 transition-colors text-left min-h-[44px]"
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left min-h-[44px]"
               onClick={() => {
                 onSelect({ ticker: result.symbol, name: result.description });
                 setQuery("");

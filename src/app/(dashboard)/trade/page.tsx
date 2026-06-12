@@ -63,7 +63,7 @@ export default function TradePage() {
             <button
               key={stock.ticker}
               onClick={() => handleSelectStock(stock)}
-              className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-left hover:border-slate-600 transition-colors min-h-[44px]"
+              className="flex items-center justify-between glass rounded-xl px-4 py-3 text-left hover:border-slate-600 transition-colors min-h-[44px]"
             >
               <div>
                 <p className="font-semibold text-sm">{stock.ticker}</p>

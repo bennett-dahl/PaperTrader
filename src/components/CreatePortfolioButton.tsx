@@ -57,13 +57,13 @@ export default function CreatePortfolioButton({ userId }: { userId: string }) {
       <DialogTrigger>
         <Button
           size="sm"
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold gap-1.5 min-h-[44px]"
+          className="bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow font-semibold gap-1.5 min-h-[44px]"
         >
           <Plus className="h-4 w-4" />
           New Portfolio
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white">
+      <DialogContent className="bg-popover backdrop-blur-xl border-glass-border text-white">
         <DialogHeader>
           <DialogTitle>Create New Portfolio</DialogTitle>
         </DialogHeader>
@@ -76,12 +76,12 @@ export default function CreatePortfolioButton({ userId }: { userId: string }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            className="bg-slate-800 border-slate-700 text-white"
+            className="bg-white/5 border-glass-border text-white"
           />
           <Button
             onClick={handleCreate}
             disabled={loading || !name.trim()}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold"
+            className="w-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-glow font-bold"
           >
             {loading ? "Creating…" : "Create Portfolio"}
           </Button>
