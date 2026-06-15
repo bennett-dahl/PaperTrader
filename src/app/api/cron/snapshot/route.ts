@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { portfolios, holdings, cachedQuotes, portfolioSnapshots } from "@/db/schema";
-import { inArray, eq } from "drizzle-orm";
+import { portfolios, holdings, portfolioSnapshots } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { refreshStaleQuotes } from "@/lib/refresh-quotes";
 
 export async function GET(req: NextRequest) {
   // Protect with Authorization header (Vercel sets this automatically for cron jobs)
@@ -20,19 +21,13 @@ export async function GET(req: NextRequest) {
       .where(eq(holdings.portfolioId, portfolio.id));
 
     const tickers = holdingsList.map((h) => h.ticker);
-    const quotes =
-      tickers.length > 0
-        ? await db
-            .select()
-            .from(cachedQuotes)
-            .where(inArray(cachedQuotes.ticker, tickers))
-        : [];
 
-    const quoteMap = Object.fromEntries(quotes.map((q) => [q.ticker, q]));
+    // Refresh stale quotes from Finnhub before snapshotting so we capture current prices
+    const freshQuoteMap = await refreshStaleQuotes(tickers);
 
     const holdingsValue = holdingsList.reduce((sum, h) => {
-      const quote = quoteMap[h.ticker];
-      const price = quote ? parseFloat(quote.price) : parseFloat(h.avgCostBasis);
+      const quote = freshQuoteMap[h.ticker];
+      const price = quote ? quote.price : parseFloat(h.avgCostBasis);
       return sum + parseFloat(h.shares) * price;
     }, 0);
 

@@ -1,8 +1,9 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { portfolios, users, holdings, cachedQuotes } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { portfolios, users, holdings } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { refreshStaleQuotes } from "@/lib/refresh-quotes";
 import { Badge } from "@/components/ui/badge";
 import CreatePortfolioButton from "@/components/CreatePortfolioButton";
 import PortfolioActions from "@/components/PortfolioActions";
@@ -24,38 +25,36 @@ export default async function PortfoliosPage() {
     .from(portfolios)
     .where(eq(portfolios.userId, dbUser[0].id));
 
-  // Get aggregate values for each portfolio
-  const enriched = await Promise.all(
-    userPortfolios.map(async (p) => {
-      const holdingsList = await db
-        .select()
-        .from(holdings)
-        .where(eq(holdings.portfolioId, p.id));
-
-      const tickers = holdingsList.map((h) => h.ticker);
-      const quotes =
-        tickers.length > 0
-          ? await db
-              .select()
-              .from(cachedQuotes)
-              .where(inArray(cachedQuotes.ticker, tickers))
-          : [];
-
-      const quoteMap = Object.fromEntries(quotes.map((q) => [q.ticker, q]));
-
-      const holdingsValue = holdingsList.reduce((sum, h) => {
-        const quote = quoteMap[h.ticker];
-        const price = quote ? parseFloat(quote.price) : parseFloat(h.avgCostBasis);
-        return sum + parseFloat(h.shares) * price;
-      }, 0);
-
-      const totalValue = parseFloat(p.cashBalance) + holdingsValue;
-      const totalReturn = totalValue - parseFloat(p.startingBalance);
-      const pct = (totalReturn / parseFloat(p.startingBalance)) * 100;
-
-      return { ...p, totalValue, totalReturn, pct, holdingsCount: holdingsList.length };
-    })
+  // Load all holdings across all portfolios, then refresh stale quotes in one pass
+  const allHoldingsList = await Promise.all(
+    userPortfolios.map((p) =>
+      db.select().from(holdings).where(eq(holdings.portfolioId, p.id))
+    )
   );
+
+  const allTickers = [
+    ...new Set(allHoldingsList.flat().map((h) => h.ticker)),
+  ];
+
+  // Refresh any stale or missing quotes from Finnhub before computing values
+  const freshQuoteMap = await refreshStaleQuotes(allTickers);
+
+  // Get aggregate values for each portfolio
+  const enriched = userPortfolios.map((p, i) => {
+    const holdingsList = allHoldingsList[i];
+
+    const holdingsValue = holdingsList.reduce((sum, h) => {
+      const quote = freshQuoteMap[h.ticker];
+      const price = quote ? quote.price : parseFloat(h.avgCostBasis);
+      return sum + parseFloat(h.shares) * price;
+    }, 0);
+
+    const totalValue = parseFloat(p.cashBalance) + holdingsValue;
+    const totalReturn = totalValue - parseFloat(p.startingBalance);
+    const pct = (totalReturn / parseFloat(p.startingBalance)) * 100;
+
+    return { ...p, totalValue, totalReturn, pct, holdingsCount: holdingsList.length };
+  });
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
