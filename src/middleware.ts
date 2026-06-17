@@ -11,6 +11,7 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/api/admin/") ||
     pathname.startsWith("/api/tickers/") ||
+    pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/api/pipeline/kronos-prefetch") ||
     pathname.startsWith("/api/pipeline/run");
 
