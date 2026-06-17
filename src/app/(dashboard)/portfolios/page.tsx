@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { portfolios, users, holdings } from "@/db/schema";
@@ -74,26 +75,31 @@ export default async function PortfoliosPage() {
             key={p.id}
             className="glass rounded-2xl px-5 py-4 space-y-3"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold">{p.name}</p>
-                {p.isDefault && (
-                  <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 text-xs">
-                    Active
-                  </Badge>
-                )}
+            <Link
+              href={`/portfolios/${p.id}`}
+              className="block space-y-3 -m-1 p-1 rounded-xl transition-colors hover:bg-slate-800/30"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold">{p.name}</p>
+                  {p.isDefault && (
+                    <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 text-xs">
+                      Active
+                    </Badge>
+                  )}
+                </div>
+                <p className="font-bold text-lg">${p.totalValue.toFixed(2)}</p>
               </div>
-              <p className="font-bold text-lg">${p.totalValue.toFixed(2)}</p>
-            </div>
-            <div className="flex justify-between text-sm text-slate-400">
-              <span>{p.holdingsCount} holdings</span>
-              <span
-                className={p.totalReturn >= 0 ? "text-emerald-400" : "text-red-400"}
-              >
-                {p.totalReturn >= 0 ? "+" : ""}
-                {p.pct.toFixed(2)}% all time
-              </span>
-            </div>
+              <div className="flex justify-between text-sm text-slate-400">
+                <span>{p.holdingsCount} holdings</span>
+                <span
+                  className={p.totalReturn >= 0 ? "text-emerald-400" : "text-red-400"}
+                >
+                  {p.totalReturn >= 0 ? "+" : ""}
+                  {p.pct.toFixed(2)}% all time
+                </span>
+              </div>
+            </Link>
             {/* Portfolio actions */}
             <PortfolioActions
               portfolioId={p.id}

@@ -94,6 +94,9 @@ export const transactions = pgTable("transactions", {
   pricePerShare: decimal("price_per_share", { precision: 15, scale: 4 }).notNull(),
   totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
   executedAt: timestamp("executed_at").defaultNow().notNull(),
+  pipelineId: uuid("pipeline_id")
+    .references(() => pipelines.id, { onDelete: "set null" }),
+  costBasisAtSale: decimal("cost_basis_at_sale", { precision: 15, scale: 4 }),
 });
 
 // Portfolio snapshots table (for charting performance over time)
@@ -365,6 +368,10 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
     fields: [transactions.portfolioId],
     references: [portfolios.id],
   }),
+  pipeline: one(pipelines, {
+    fields: [transactions.pipelineId],
+    references: [pipelines.id],
+  }),
 }));
 
 export const portfolioSnapshotsRelations = relations(
@@ -406,6 +413,7 @@ export const pipelinesRelations = relations(pipelines, ({ one, many }) => ({
   runs: many(pipelineRuns),
   decisions: many(decisionLog),
   kronosForecasts: many(kronosForecasts),
+  transactions: many(transactions),
 }));
 
 export const kronosForecastsRelations = relations(kronosForecasts, ({ one }) => ({

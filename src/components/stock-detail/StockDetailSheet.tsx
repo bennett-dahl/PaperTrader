@@ -29,6 +29,7 @@ import { useActivePortfolio } from "@/contexts/ActivePortfolioContext";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { cn } from "@/lib/utils";
+import { TransactionRow } from "@/types/transactions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -946,6 +947,23 @@ export function StockDetailSheet({
   const [detailData, setDetailData] = useState<StockDetailResponse | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
 
+  // Your trades (portfolio-scoped, ticker-filtered)
+  const [trades, setTrades] = useState<TransactionRow[]>([]);
+  const [tradesLoading, setTradesLoading] = useState(false);
+
+  useEffect(() => {
+    // Only fetch trades when the sheet is open in the holdings context.
+    // Skip for "search" and "builder" contexts where activePortfolioId
+    // may be unrelated to what is displayed.
+    if (!open || !activePortfolioId || context !== "holdings") return;
+    setTradesLoading(true);
+    fetch(`/api/portfolios/${activePortfolioId}/transactions?ticker=${ticker}`)
+      .then((res) => (res.ok ? res.json() : Promise.resolve([])))
+      .then((data: TransactionRow[]) => setTrades(data.slice(0, 10)))
+      .catch(() => setTrades([]))
+      .finally(() => setTradesLoading(false));
+  }, [open, ticker, activePortfolioId, context]);
+
   // Kronos forecast
   const [kronosForecast, setKronosForecast] = useState<{
     predictedReturnPct: number;
@@ -1233,6 +1251,90 @@ export function StockDetailSheet({
                 </div>
               </div>
             )}
+
+            {/* ── Your trades ─────────────────────────────────────────────── */}
+            <div className="mt-6 px-1">
+              <h3 className="text-sm font-semibold text-slate-300 mb-3">Your trades</h3>
+
+              {tradesLoading ? (
+                <p className="text-slate-500 text-sm">Loading…</p>
+              ) : trades.length === 0 ? (
+                <p className="text-slate-500 text-sm">No trades for this stock yet</p>
+              ) : (
+                <div className="space-y-0">
+                  {trades.map((tx) => {
+                    const sharesNum = parseFloat(tx.shares);
+                    const priceNum = parseFloat(tx.pricePerShare);
+                    const totalNum = parseFloat(tx.totalAmount);
+
+                    // P&L: only for SELL with costBasisAtSale present
+                    let pnl: number | null = null;
+                    if (tx.type === "SELL" && tx.costBasisAtSale != null) {
+                      const costBasis = parseFloat(tx.costBasisAtSale);
+                      pnl = (priceNum - costBasis) * sharesNum;
+                    }
+
+                    return (
+                      <div
+                        key={tx.id}
+                        className="flex items-center gap-3 py-2.5 border-b border-slate-700/50 last:border-0"
+                      >
+                        {/* Date */}
+                        <span className="text-xs text-slate-500 w-16 shrink-0">
+                          {new Date(tx.executedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+
+                        {/* BUY/SELL badge */}
+                        <span
+                          className={cn(
+                            "text-xs font-bold px-1.5 py-0.5 rounded shrink-0",
+                            tx.type === "BUY"
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-red-500/20 text-red-400"
+                          )}
+                        >
+                          {tx.type}
+                        </span>
+
+                        {/* shares @ price */}
+                        <span className="text-xs text-slate-400 flex-1 min-w-0 truncate">
+                          {sharesNum % 1 === 0 ? sharesNum.toFixed(0) : sharesNum.toFixed(4)}{" "}
+                          @ ${priceNum.toFixed(2)}
+                        </span>
+
+                        {/* Total + P&L */}
+                        <div className="text-right shrink-0">
+                          <div className="text-xs text-slate-300">
+                            $
+                            {totalNum.toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </div>
+                          {pnl != null && (
+                            <div
+                              className={cn(
+                                "text-xs font-medium",
+                                pnl >= 0 ? "text-emerald-400" : "text-red-400"
+                              )}
+                            >
+                              {pnl >= 0 ? "+" : "-"}$
+                              {Math.abs(pnl).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
           </div>
 

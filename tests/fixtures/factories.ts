@@ -7,6 +7,7 @@ import type {
   PortfolioBuilderPreset,
   StockUniverse,
   CachedQuote,
+  Transaction,
 } from "@/db/schema";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -43,6 +44,31 @@ export const mockHolding: Holding = {
   shares: "10.0000",
   avgCostBasis: "150.0000",
   createdAt: new Date("2025-02-01"),
+};
+
+// ─── Transactions ─────────────────────────────────────────────────────────────
+export const mockTransaction: Transaction = {
+  id: "txn-uuid-1",
+  portfolioId: "portfolio-uuid-1",
+  ticker: "AAPL",
+  type: "BUY",
+  shares: "10.000000",
+  pricePerShare: "150.0000",
+  totalAmount: "1500.00",
+  costBasisAtSale: null,
+  pipelineId: null,
+  executedAt: new Date("2026-06-01T14:30:00Z"),
+};
+
+export const mockSellTransaction: Transaction = {
+  ...mockTransaction,
+  id: "txn-uuid-2",
+  type: "SELL",
+  totalAmount: "1000.00",
+  pricePerShare: "200.0000",
+  shares: "5.000000",
+  costBasisAtSale: "150.0000",
+  pipelineId: "pipeline-uuid-1",
 };
 
 // ─── Cached Quotes ────────────────────────────────────────────────────────────

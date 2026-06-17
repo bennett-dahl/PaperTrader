@@ -75,8 +75,12 @@ describe("MobileNav", () => {
     expect(screen.getByText("Trade")).toBeInTheDocument();
     expect(screen.getByText("Advisor")).toBeInTheDocument();
     expect(screen.getByText("Watchlist")).toBeInTheDocument();
-    expect(screen.getByText("History")).toBeInTheDocument();
     expect(screen.getByText("Portfolios")).toBeInTheDocument();
+  });
+
+  it("no longer renders the removed History nav item", () => {
+    render(<MobileNav user={defaultUser} />);
+    expect(screen.queryByText("History")).not.toBeInTheDocument();
   });
 
   it("renders user name and email", () => {

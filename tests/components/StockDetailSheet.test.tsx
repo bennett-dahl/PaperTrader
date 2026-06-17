@@ -1,6 +1,7 @@
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StockDetailSheet } from "@/components/stock-detail/StockDetailSheet";
+import { TransactionRow } from "@/types/transactions";
 
 // Mock hooks used by StockDetailSheet
 vi.mock("@/hooks/useWatchlist", () => ({
@@ -187,5 +188,130 @@ describe("StockDetailSheet — Kronos forecast", () => {
     });
 
     expect(screen.queryByText("Kronos Forecast")).not.toBeInTheDocument();
+  });
+});
+
+describe("StockDetailSheet — Your trades section", () => {
+  const mockTrades: TransactionRow[] = [
+    {
+      id: "t1",
+      ticker: "AAPL",
+      type: "BUY",
+      shares: "10.000000",
+      pricePerShare: "150.0000",
+      totalAmount: "1500.00",
+      costBasisAtSale: null,
+      executedAt: new Date("2026-06-01T10:00:00Z"),
+      pipelineId: null,
+      pipelineName: null,
+    },
+    {
+      id: "t2",
+      ticker: "AAPL",
+      type: "SELL",
+      shares: "5.000000",
+      pricePerShare: "200.0000",
+      totalAmount: "1000.00",
+      costBasisAtSale: "150.0000",
+      executedAt: new Date("2026-06-10T14:00:00Z"),
+      pipelineId: null,
+      pipelineName: null,
+    },
+  ];
+
+  function setupFetch(trades: TransactionRow[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: RequestInfo | URL) => {
+        const urlStr = url.toString();
+        if (urlStr.includes("/transactions")) {
+          return Promise.resolve({ ok: true, json: async () => trades } as any);
+        }
+        return Promise.resolve({ ok: false, json: async () => ({}) } as any);
+      })
+    );
+  }
+
+  function renderSheet() {
+    return render(
+      <StockDetailSheet
+        open={true}
+        onClose={vi.fn()}
+        ticker="AAPL"
+        stockName="Apple Inc."
+        context="holdings"
+      />
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders 'Your trades' heading when open", async () => {
+    setupFetch(mockTrades);
+    renderSheet();
+    await waitFor(() => {
+      expect(screen.getByText("Your trades")).toBeInTheDocument();
+    });
+  });
+
+  it("shows 'No trades for this stock yet' when trades array is empty", async () => {
+    setupFetch([]);
+    renderSheet();
+    await waitFor(() => {
+      expect(screen.getByText(/no trades for this stock yet/i)).toBeInTheDocument();
+    });
+  });
+
+  it("calculates P&L for SELL: (200 - 150) * 5 = +$250.00", async () => {
+    setupFetch(mockTrades);
+    renderSheet();
+    await waitFor(() => {
+      expect(screen.getByText("+$250.00")).toBeInTheDocument();
+    });
+    const pnlEl = screen.getByText("+$250.00");
+    expect(pnlEl.className).toMatch(/emerald/);
+  });
+
+  it("does not render P&L for BUY rows", async () => {
+    setupFetch([mockTrades[0]]); // BUY only
+    renderSheet();
+    await waitFor(() => {
+      expect(screen.getByText("BUY")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/\+\$/)).not.toBeInTheDocument();
+  });
+
+  it("does not render P&L when costBasisAtSale is null on SELL", async () => {
+    const sellNoCost: TransactionRow[] = [
+      { ...mockTrades[1], costBasisAtSale: null },
+    ];
+    setupFetch(sellNoCost);
+    renderSheet();
+    await waitFor(() => {
+      expect(screen.getByText("SELL")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/\+\$|-\$/)).not.toBeInTheDocument();
+  });
+
+  it("shows P&L in red for a losing SELL", async () => {
+    const losingTrades: TransactionRow[] = [
+      {
+        ...mockTrades[1],
+        pricePerShare: "100.0000",    // sold at $100
+        costBasisAtSale: "150.0000",  // bought at $150 → loss
+        totalAmount: "500.00",
+        shares: "5.000000",
+      },
+    ];
+    setupFetch(losingTrades);
+    renderSheet();
+    // P&L = (100 - 150) * 5 = -$250.00
+    await waitFor(() => {
+      const pnlEl = screen.getByText("-$250.00");
+      expect(pnlEl).toBeInTheDocument();
+      expect(pnlEl.className).toMatch(/red/);
+    });
   });
 });

@@ -287,6 +287,7 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
                   type: "BUY",
                   shares: sharesToBuy,
                   userId: pipeline.userId,
+                  pipelineId: pipeline.id,
                 });
                 if (tradeResult.success) {
                   executed = true;
@@ -313,6 +314,7 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
               type: "SELL",
               shares: sellShares,
               userId: pipeline.userId,
+              pipelineId: pipeline.id,
             });
             if (tradeResult.success) {
               executed = true;

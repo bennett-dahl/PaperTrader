@@ -7,7 +7,6 @@ import {
   TrendingUp,
   Briefcase,
   Eye,
-  Clock,
 } from "lucide-react";
 
 const tabItems = [
@@ -15,7 +14,6 @@ const tabItems = [
   { href: "/trade", label: "Trade", icon: TrendingUp },
   { href: "/portfolios", label: "Portfolios", icon: Briefcase },
   { href: "/watchlist", label: "Watchlist", icon: Eye },
-  { href: "/history", label: "History", icon: Clock },
 ];
 
 /**

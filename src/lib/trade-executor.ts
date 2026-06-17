@@ -11,6 +11,8 @@ export interface ExecuteTradeParams {
   userId: string;
   /** Optional pre-fetched price. If omitted, executeTrade fetches from cache/Finnhub. */
   price?: number;
+  /** Optional pipeline UUID. Written to the transaction row; null for manual trades. */
+  pipelineId?: string;
 }
 
 export interface ExecuteTradeResult {
@@ -100,6 +102,8 @@ export async function executeTrade(params: ExecuteTradeParams): Promise<ExecuteT
 
       const cashBalance = parseFloat(currentPortfolio.cashBalance);
 
+      let costBasisAtSale: string | null = null;
+
       if (type === "BUY") {
         if (totalCost > cashBalance) {
           throw Object.assign(
@@ -148,6 +152,9 @@ export async function executeTrade(params: ExecuteTradeParams): Promise<ExecuteT
           throw Object.assign(new Error("You don't hold this stock"), { code: "no_holding" });
         }
 
+        // Capture cost basis AFTER the null-guard, BEFORE any delete/update.
+        costBasisAtSale = existing[0].avgCostBasis;
+
         const existingShares = parseFloat(existing[0].shares);
         if (shares > existingShares) {
           throw Object.assign(
@@ -176,6 +183,8 @@ export async function executeTrade(params: ExecuteTradeParams): Promise<ExecuteT
         shares: String(shares),
         pricePerShare: String(price),
         totalAmount: String(totalCost),
+        pipelineId: params.pipelineId ?? null,
+        costBasisAtSale,
       });
     });
 

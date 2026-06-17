@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { portfolios, holdings, users, cachedQuotes } from "@/db/schema";
@@ -113,6 +114,15 @@ export default async function DashboardPage({
             selectedId={portfolio.id}
           />
         </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Link
+          href={`/portfolios/${portfolio.id}`}
+          className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
+        >
+          View detail →
+        </Link>
       </div>
 
       <LivePortfolioDashboard

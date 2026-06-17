@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   TrendingUp,
   Eye,
-  Clock,
   Briefcase,
   LogOut,
   Wand2,
@@ -20,7 +19,6 @@ const navItems = [
   { href: "/trade", label: "Trade", icon: TrendingUp },
   { href: "/advisor", label: "Advisor", icon: Wand2 },
   { href: "/watchlist", label: "Watchlist", icon: Eye },
-  { href: "/history", label: "History", icon: Clock },
   { href: "/portfolios", label: "Portfolios", icon: Briefcase },
   { href: "/pipelines", label: "Pipelines", icon: Zap },
 ];
