@@ -29,7 +29,6 @@ export default defineConfig({
         "src/components/BottomNav.tsx",    // pure nav, no logic
         "src/components/Sidebar.tsx",      // pure nav, no logic
         "src/components/OnboardingFlow.tsx", // complex onboarding flow
-        "src/components/PortfolioSwitcher.tsx", // pure UI
         "src/components/SessionProvider.tsx",   // auth provider wrapper
         "src/components/StockSearch.tsx",       // search UI, covered via API tests
         "src/components/CreatePortfolioButton.tsx",

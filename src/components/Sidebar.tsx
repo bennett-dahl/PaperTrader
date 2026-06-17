@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import SidebarPortfolioPicker from "@/components/SidebarPortfolioPicker";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,9 +30,10 @@ interface SidebarProps {
     email?: string | null;
     image?: string | null;
   };
+  portfolios: { id: string; name: string }[];
 }
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, portfolios }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -42,6 +44,11 @@ export default function Sidebar({ user }: SidebarProps) {
           <TrendingUp className="h-5 w-5 text-emerald-400" />
         </span>
         <span className="text-lg font-semibold tracking-tight text-gradient">PaperTrader</span>
+      </div>
+
+      {/* Active portfolio */}
+      <div className="px-3 py-3 border-b border-glass-border">
+        <SidebarPortfolioPicker portfolios={portfolios} />
       </div>
 
       {/* Nav */}

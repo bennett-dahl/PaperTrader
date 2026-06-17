@@ -1,12 +1,13 @@
 import { auth } from "@/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { db } from "@/db";
 import { portfolios, holdings, users, cachedQuotes } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import PriceChart from "@/components/PriceChart";
-import PortfolioSwitcher from "@/components/PortfolioSwitcher";
 import LivePortfolioDashboard from "@/components/LivePortfolioDashboard";
+import { PORTFOLIO_COOKIE } from "@/lib/portfolio-cookie";
 import { portfolioSnapshots } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { HoldingWithPrice } from "@/types";
@@ -35,11 +36,15 @@ export default async function DashboardPage({
 
   if (allPortfolios.length === 0) redirect("/onboarding");
 
-  // Resolve selected portfolio from search params
+  // Resolve selected portfolio: URL param → cookie → default → first
   const { portfolio: portfolioParam } = await searchParams;
+  const cookiePortfolioId = (await cookies()).get(PORTFOLIO_COOKIE)?.value;
   const portfolio =
     (portfolioParam
       ? allPortfolios.find((p) => p.id === portfolioParam)
+      : undefined) ??
+    (cookiePortfolioId
+      ? allPortfolios.find((p) => p.id === cookiePortfolioId)
       : undefined) ??
     allPortfolios.find((p) => p.isDefault) ??
     allPortfolios[0];
@@ -107,13 +112,7 @@ export default async function DashboardPage({
         <h1 className="text-2xl font-bold">
           Hey, {session.user.name?.split(" ")[0]} 👋
         </h1>
-        <div className="flex items-center gap-3 mt-2">
-          <p className="text-slate-400 text-sm">{portfolio.name}</p>
-          <PortfolioSwitcher
-            portfolios={allPortfolios.map((p) => ({ id: p.id, name: p.name }))}
-            selectedId={portfolio.id}
-          />
-        </div>
+        <p className="text-slate-400 text-sm mt-2">{portfolio.name}</p>
       </div>
 
       <div className="flex justify-end">
