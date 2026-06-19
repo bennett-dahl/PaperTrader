@@ -5,7 +5,10 @@ import { eq } from "drizzle-orm";
 
 export async function requireAdminUser(req: NextRequest) {
   const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.PIPELINE_SECRET}`) return null;
+  const secret = process.env.PIPELINE_SECRET;
+  console.log("[_auth] auth header:", auth ? `Bearer ${auth.slice(7, 15)}...` : "(none)");
+  console.log("[_auth] env secret:", secret ? `${secret.slice(0, 8)}...` : "(undefined)");
+  if (auth !== `Bearer ${secret}`) return null;
   const email = process.env.ADMIN_USER_EMAIL;
   if (!email) return null;
   const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
