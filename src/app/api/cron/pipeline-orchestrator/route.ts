@@ -3,6 +3,7 @@ import { Client as QStashClient } from "@upstash/qstash";
 import { db } from "@/db";
 import { pipelines } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { runKronosPrefetch } from "@/lib/run-kronos-prefetch";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -10,6 +11,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Step 1: Prefetch Kronos forecasts before dispatching pipeline runs.
+  // Errors are non-fatal — pipelines fall back to earnings-only signals.
+  let kronosPrefetch = { upserted: 0, skipped: 0, errors: 0 };
+  try {
+    const result = await runKronosPrefetch();
+    kronosPrefetch = {
+      upserted: result.upserted,
+      skipped: result.skipped,
+      errors: result.errors.length,
+    };
+    console.log("[orchestrator] Kronos prefetch complete:", result);
+  } catch (err) {
+    console.error("[orchestrator] Kronos prefetch failed (continuing):", err);
+  }
+
+  // Step 2: Dispatch all active pipeline runs via QStash
   const activePipelines = await db
     .select({ id: pipelines.id, name: pipelines.name })
     .from(pipelines)
@@ -41,5 +58,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ dispatched: dispatched.length, failed: failed.length });
+  return NextResponse.json({
+    dispatched: dispatched.length,
+    failed: failed.length,
+    kronosPrefetch,
+  });
 }

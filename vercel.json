@@ -2,15 +2,15 @@
   "crons": [
     {
       "path": "/api/cron/refresh-quotes",
-      "schedule": "0 23 * * *"
-    },
-    {
-      "path": "/api/cron/snapshot",
-      "schedule": "7 23 * * *"
+      "schedule": "0 19 * * 1-5"
     },
     {
       "path": "/api/cron/pipeline-orchestrator",
-      "schedule": "3 23 * * *"
+      "schedule": "15 19 * * 1-5"
+    },
+    {
+      "path": "/api/cron/snapshot",
+      "schedule": "30 20 * * 1-5"
     }
   ]
 }
