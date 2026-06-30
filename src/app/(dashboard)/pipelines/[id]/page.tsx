@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Play, CheckCircle, XCircle, MinusCircle, ChevronDown } from "lucide-react";
 import { KronosForecastsCard, deriveSignal, type KronosForecastRow } from "@/components/KronosForecastsCard";
+import { KronosTunePanel } from "@/components/KronosTunePanel";
+import type { SizingCurve } from "@/lib/kronos-sizing";
 
 interface PipelineDetail {
   pipeline: Record<string, unknown>;
@@ -68,7 +70,7 @@ function RunStatusIcon({ status }: { status: string }) {
   return <span className="text-slate-400 text-xs">{status}</span>;
 }
 
-type Tab = "overview" | "runs" | "decisions" | "settings";
+type Tab = "overview" | "runs" | "decisions" | "tune" | "settings";
 
 export default function PipelineDetailPage() {
   const params = useParams();
@@ -181,6 +183,7 @@ export default function PipelineDetailPage() {
     { key: "overview", label: "Overview" },
     { key: "runs", label: "Run History" },
     { key: "decisions", label: "Decision Log" },
+    ...(pipeline.strategyType === "kronos_rotation" ? [{ key: "tune" as Tab, label: "⚙️ Tune" }] : []),
     { key: "settings", label: "Settings" },
   ];
 
@@ -442,6 +445,28 @@ export default function PipelineDetailPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Tune Tab */}
+      {tab === "tune" && pipeline.strategyType === "kronos_rotation" && (
+        <KronosTunePanel
+          pipelineId={id}
+          initial={{
+            kronosMinSignalPct:  String(pipeline.kronosMinSignalPct  ?? "1.00"),
+            kronosMinTradePct:   String(pipeline.kronosMinTradePct   ?? "20.00"),
+            kronosMaxTradePct:   String(pipeline.kronosMaxTradePct   ?? "80.00"),
+            kronosSaturationPct: String(pipeline.kronosSaturationPct ?? "5.00"),
+            kronosSizingCurve:   String(pipeline.kronosSizingCurve   ?? "linear") as SizingCurve,
+            kronosTickerUniverse: (pipeline.kronosTickerUniverse as string[]) ?? [],
+            maxPositions:           Number(pipeline.maxPositions ?? 10),
+            maxPositionPct:         String(pipeline.maxPositionPct ?? "10.00"),
+            minCashReservePct:      String(pipeline.minCashReservePct ?? "5.00"),
+            minConfidenceThreshold: String(pipeline.minConfidenceThreshold ?? "0.65"),
+            earningsLookbackDays:   Number(pipeline.earningsLookbackDays ?? 3),
+            earningsForwardDays:    Number(pipeline.earningsForwardDays ?? 7),
+          }}
+          onSaved={fetchData}
+        />
       )}
 
       {/* Settings */}

@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
     "thesis", "strategyType", "tickerUniverse", "maxPositions",
     "maxPositionPct", "minCashReservePct", "earningsLookbackDays", "earningsForwardDays",
     "minConfidenceThreshold", "autonomous", "allowShortSell", "rebalanceOnRun", "hypothesisConfig",
-    "kronosTickerUniverse", "kronosRebalancePct", "kronosMinSignalPct",
+    "kronosTickerUniverse", "kronosMinSignalPct",
+    "kronosMinTradePct", "kronosMaxTradePct", "kronosSaturationPct", "kronosSizingCurve",
   ];
   for (const f of inputFields) {
     if (f in body && body[f] !== undefined) userInput[f] = body[f];
@@ -120,8 +121,11 @@ export async function POST(req: NextRequest) {
       rebalanceOnRun: resolved.rebalanceOnRun,
       hypothesisConfig: resolved.hypothesisConfig,
       kronosTickerUniverse: (resolved.kronosTickerUniverse as string[]) ?? [],
-      kronosRebalancePct: resolved.kronosRebalancePct ? String(resolved.kronosRebalancePct) : "50.00",
       kronosMinSignalPct: resolved.kronosMinSignalPct ? String(resolved.kronosMinSignalPct) : "1.00",
+      kronosMinTradePct:  resolved.kronosMinTradePct  ? String(resolved.kronosMinTradePct)  : "20.00",
+      kronosMaxTradePct:  resolved.kronosMaxTradePct  ? String(resolved.kronosMaxTradePct)  : "80.00",
+      kronosSaturationPct: resolved.kronosSaturationPct ? String(resolved.kronosSaturationPct) : "5.00",
+      kronosSizingCurve:  resolved.kronosSizingCurve  ? String(resolved.kronosSizingCurve)  : "linear",
       configOverrides: overrides,
     })
     .returning();

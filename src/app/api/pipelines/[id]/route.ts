@@ -83,9 +83,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const userInput: Record<string, unknown> = {};
-  const inputFields = ["thesis", "strategyType", "tickerUniverse", "maxPositions",
-    "maxPositionPct", "minCashReservePct", "earningsLookbackDays", "earningsForwardDays",
-    "minConfidenceThreshold", "autonomous", "allowShortSell", "rebalanceOnRun", "hypothesisConfig"];
+  const inputFields = [
+    "thesis", "strategyType", "tickerUniverse",
+    "maxPositions", "maxPositionPct", "minCashReservePct",
+    "earningsLookbackDays", "earningsForwardDays",
+    "minConfidenceThreshold", "autonomous", "allowShortSell",
+    "rebalanceOnRun", "hypothesisConfig",
+    "kronosTickerUniverse",
+    "kronosMinSignalPct",
+    "kronosMinTradePct", "kronosMaxTradePct", "kronosSaturationPct", "kronosSizingCurve",
+  ];
 
   for (const f of inputFields) {
     if (f in body && body[f] !== undefined) userInput[f] = body[f];
@@ -110,6 +117,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     rebalanceOnRun: resolved.rebalanceOnRun,
     hypothesisConfig: resolved.hypothesisConfig,
     configOverrides: overrides,
+    kronosTickerUniverse: resolved.kronosTickerUniverse,
+    kronosMinSignalPct:   String(resolved.kronosMinSignalPct),
+    kronosMinTradePct:    String(resolved.kronosMinTradePct),
+    kronosMaxTradePct:    String(resolved.kronosMaxTradePct),
+    kronosSaturationPct:  String(resolved.kronosSaturationPct),
+    kronosSizingCurve:    resolved.kronosSizingCurve,
     updatedAt: new Date(),
   };
 

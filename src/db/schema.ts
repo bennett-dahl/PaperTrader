@@ -180,8 +180,11 @@ export const strategyTemplates = pgTable("strategy_templates", {
   hypothesisConfig: text("hypothesis_config"),
   // Kronos-specific configuration
   kronosTickerUniverse: json("kronos_ticker_universe").$type<string[]>().default([]),
-  kronosRebalancePct: decimal("kronos_rebalance_pct", { precision: 5, scale: 2 }).default("50.00"),
   kronosMinSignalPct: decimal("kronos_min_signal_pct", { precision: 5, scale: 2 }).default("1.00"),
+  kronosMinTradePct:  decimal("kronos_min_trade_pct",  { precision: 5, scale: 2 }).notNull().default("20.00"),
+  kronosMaxTradePct:  decimal("kronos_max_trade_pct",  { precision: 5, scale: 2 }).notNull().default("80.00"),
+  kronosSaturationPct: decimal("kronos_saturation_pct", { precision: 5, scale: 2 }).notNull().default("5.00"),
+  kronosSizingCurve:  text("kronos_sizing_curve").notNull().default("linear"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -212,8 +215,11 @@ export const pipelines = pgTable("pipelines", {
   configOverrides: text("config_overrides").array().notNull().default([]),
   // Kronos-specific configuration
   kronosTickerUniverse: json("kronos_ticker_universe").$type<string[]>().default([]),
-  kronosRebalancePct: decimal("kronos_rebalance_pct", { precision: 5, scale: 2 }).default("50.00"),
   kronosMinSignalPct: decimal("kronos_min_signal_pct", { precision: 5, scale: 2 }).default("1.00"),
+  kronosMinTradePct:  decimal("kronos_min_trade_pct",  { precision: 5, scale: 2 }).notNull().default("20.00"),
+  kronosMaxTradePct:  decimal("kronos_max_trade_pct",  { precision: 5, scale: 2 }).notNull().default("80.00"),
+  kronosSaturationPct: decimal("kronos_saturation_pct", { precision: 5, scale: 2 }).notNull().default("5.00"),
+  kronosSizingCurve:  text("kronos_sizing_curve").notNull().default("linear"),
   lastRunAt: timestamp("last_run_at"),
   nextRunAt: timestamp("next_run_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

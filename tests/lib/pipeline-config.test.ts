@@ -21,6 +21,12 @@ const baseTemplate: StrategyTemplate = {
   allowShortSell: false,
   rebalanceOnRun: false,
   hypothesisConfig: null,
+  kronosTickerUniverse: [],
+  kronosMinSignalPct: "1.00",
+  kronosMinTradePct: "20.00",
+  kronosMaxTradePct: "80.00",
+  kronosSaturationPct: "5.00",
+  kronosSizingCurve: "linear",
   createdAt: new Date(),
   updatedAt: new Date(),
 };

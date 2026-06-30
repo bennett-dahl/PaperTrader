@@ -54,7 +54,10 @@ export async function POST(req: NextRequest) {
       rebalanceOnRun: body.rebalanceOnRun ?? false,
       hypothesisConfig: body.hypothesisConfig ?? null,
       kronosTickerUniverse: body.kronosTickerUniverse ?? [],
-      kronosRebalancePct: body.kronosRebalancePct != null ? String(body.kronosRebalancePct) : "50.00",
+      kronosMinTradePct:  body.kronosMinTradePct  != null ? String(body.kronosMinTradePct)  : "20.00",
+      kronosMaxTradePct:  body.kronosMaxTradePct  != null ? String(body.kronosMaxTradePct)  : "80.00",
+      kronosSaturationPct: body.kronosSaturationPct != null ? String(body.kronosSaturationPct) : "5.00",
+      kronosSizingCurve:  body.kronosSizingCurve  != null ? String(body.kronosSizingCurve)  : "linear",
       kronosMinSignalPct: body.kronosMinSignalPct != null ? String(body.kronosMinSignalPct) : "1.00",
     })
     .returning();

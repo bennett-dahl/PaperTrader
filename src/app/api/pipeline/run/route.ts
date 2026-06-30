@@ -11,6 +11,7 @@ import {
 import { eq, and, inArray } from "drizzle-orm";
 import { fetchEarningsSignals } from "@/lib/earnings";
 import { buildPrompt, decisionSchema, type AIDecisionOutput } from "@/lib/pipeline-prompt";
+import { computeKronosTradePct, type SizingCurve } from "@/lib/kronos-sizing";
 import { executeTrade } from "@/lib/trade-executor";
 import { getFinnhubClient, fetchQuote } from "@/lib/finnhub";
 
@@ -154,7 +155,13 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
         const { object, usage } = await generateObject({
           model: anthropic("claude-haiku-4-5"),
           schema: decisionSchema,
-          prompt: buildPrompt(pipeline, tickers, earningsMap, portfolioState, today, kronosForecastData),
+          prompt: buildPrompt({
+            ...pipeline,
+            kronosMinTradePct: pipeline.kronosMinTradePct ?? null,
+            kronosMaxTradePct: pipeline.kronosMaxTradePct ?? null,
+            kronosSaturationPct: pipeline.kronosSaturationPct ?? null,
+            kronosSizingCurve: pipeline.kronosSizingCurve ?? null,
+          }, tickers, earningsMap, portfolioState, today, kronosForecastData),
         });
         aiOutput = object;
         totalInputTokens += usage.inputTokens ?? 0;
@@ -165,6 +172,42 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       }
 
       const validDecisions = aiOutput.decisions.filter((d) => tickers.includes(d.ticker));
+
+      // Kronos sizing guard: clamp sharesPct to curve-computed value for kronos_rotation
+      if (pipeline.strategyType === "kronos_rotation") {
+        const sizingConfig = {
+          kronosMinSignalPct:  parseFloat(pipeline.kronosMinSignalPct  ?? "1.00"),
+          kronosMinTradePct:   parseFloat(pipeline.kronosMinTradePct   ?? "20.00"),
+          kronosMaxTradePct:   parseFloat(pipeline.kronosMaxTradePct   ?? "80.00"),
+          kronosSaturationPct: parseFloat(pipeline.kronosSaturationPct ?? "5.00"),
+          kronosSizingCurve:   (pipeline.kronosSizingCurve ?? "linear") as SizingCurve,
+        };
+
+        for (const decision of validDecisions) {
+          if (decision.action !== "BUY" && decision.action !== "SELL") continue;
+          const forecast = kronosForecastData.find((f) => f.ticker === decision.ticker);
+          if (!forecast) continue;
+
+          const mag = Math.abs(forecast.predictedReturnPct);
+          const authorizedPct = computeKronosTradePct(mag, sizingConfig);
+
+          if (authorizedPct == null) {
+            // Signal fell below threshold — downgrade to SKIP
+            decision.action = "SKIP";
+            decision.reasoning = `[Sizing guard] Signal magnitude ${mag.toFixed(2)}% is below threshold ${sizingConfig.kronosMinSignalPct}% after guard check. Downgraded to SKIP.`;
+            continue;
+          }
+
+          // Clamp Claude's sharesPct to ±20% of authorized value
+          const allowedMin = Math.max(1, authorizedPct * 0.8);
+          const allowedMax = authorizedPct * 1.2;
+          if (decision.sharesPct != null) {
+            decision.sharesPct = Math.min(allowedMax, Math.max(allowedMin, decision.sharesPct));
+          } else {
+            decision.sharesPct = authorizedPct;
+          }
+        }
+      }
       const cashFloor = totalValue * (parseFloat(pipeline.minCashReservePct) / 100);
       let remainingCash = deployableCash;
 

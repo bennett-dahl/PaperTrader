@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { EarningsSignal } from "./earnings";
+import { computeKronosTradePct, type SizingCurve } from "./kronos-sizing";
 
 export const decisionSchema = z.object({
   decisions: z.array(
@@ -37,8 +38,11 @@ export interface PipelineConfigForPrompt {
   earningsForwardDays: number;
   minConfidenceThreshold: string;
   // Kronos-specific (only populated for kronos_rotation)
-  kronosRebalancePct?: string | null;
   kronosMinSignalPct?: string | null;
+  kronosMinTradePct?: string | null;
+  kronosMaxTradePct?: string | null;
+  kronosSaturationPct?: string | null;
+  kronosSizingCurve?: string | null;
 }
 
 export function buildPrompt(
@@ -75,31 +79,42 @@ export function buildPrompt(
   let kronosSectionText = "";
 
   if (kronosForecasts && kronosForecasts.length > 0) {
-    const rebalancePct = pipeline.kronosRebalancePct ?? "50";
     const minSignalPct = parseFloat(pipeline.kronosMinSignalPct ?? "1.00");
+    const sizingConfig = {
+      kronosMinSignalPct: minSignalPct,
+      kronosMinTradePct:  parseFloat(pipeline.kronosMinTradePct  ?? "20"),
+      kronosMaxTradePct:  parseFloat(pipeline.kronosMaxTradePct  ?? "80"),
+      kronosSaturationPct: parseFloat(pipeline.kronosSaturationPct ?? "5.00"),
+      kronosSizingCurve:  (pipeline.kronosSizingCurve ?? "linear") as SizingCurve,
+    };
 
     const sortedForecasts = [...kronosForecasts].sort(
       (a, b) => b.predictedReturnPct - a.predictedReturnPct
     );
 
-    const forecastRows = sortedForecasts
-      .map(
-        (f) =>
-          `${f.ticker.padEnd(6)} | ${(f.predictedReturnPct >= 0 ? "+" : "") + f.predictedReturnPct.toFixed(2)}%`
-      )
-      .join("\n");
+    const forecastRows = sortedForecasts.map((f) => {
+      const mag = Math.abs(f.predictedReturnPct);
+      const sizePct = computeKronosTradePct(mag, sizingConfig);
+      const sizeHint = sizePct != null ? ` → trade ${sizePct}%` : " → below threshold";
+      return (
+        `${f.ticker.padEnd(6)} | ${(f.predictedReturnPct >= 0 ? "+" : "") + f.predictedReturnPct.toFixed(2)}%${sizeHint}`
+      );
+    }).join("\n");
 
     kronosSectionText = `
 ## Kronos AI Forecasts (24h predicted return, sorted descending)
-Ticker | Predicted Return
+Ticker | Predicted Return | Suggested Trade Size
 ${forecastRows}
 
 Kronos signal rules:
-- BUY candidates: tickers with predicted return > +${minSignalPct}% (above threshold)
-- SELL candidates: tickers you currently hold with predicted return < -${minSignalPct}% (below negative threshold)
-- SELL instruction: aim to reduce the position by ~${rebalancePct}% (set sharesPct = ${rebalancePct} unless thesis warrants more/less)
-- Tickers with predicted return between -${minSignalPct}% and +${minSignalPct}% are neutral — treat as HOLD or SKIP unless earnings signals override
-- Kronos signals are the PRIMARY rotation signal; earnings signals are SECONDARY confirmation
+- BUY candidates: tickers with predicted return > +${minSignalPct}% 
+- SELL candidates: tickers you hold with predicted return < -${minSignalPct}%
+- Trade size (sharesPct) is pre-computed based on signal strength and shown above — use the suggested size unless portfolio constraints prevent it
+- The sizing curve is ${sizingConfig.kronosSizingCurve}: at ±${minSignalPct}% the trade is ${sizingConfig.kronosMinTradePct}%, at ±${sizingConfig.kronosSaturationPct}% or above it's ${sizingConfig.kronosMaxTradePct}%
+- For BUY: sharesPct = suggested % of deployable cash to allocate
+- For SELL: sharesPct = suggested % of the current position to exit
+- Tickers between -${minSignalPct}% and +${minSignalPct}% → HOLD or SKIP
+- Kronos signals are PRIMARY; earnings signals are SECONDARY confirmation
 `;
   }
 

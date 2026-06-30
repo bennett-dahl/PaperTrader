@@ -9,8 +9,11 @@ const basePipeline = {
   earningsLookbackDays: 3,
   earningsForwardDays: 7,
   minConfidenceThreshold: "0.60",
-  kronosRebalancePct: "50.00",
   kronosMinSignalPct: "1.00",
+  kronosMinTradePct: "20.00",
+  kronosMaxTradePct: "80.00",
+  kronosSaturationPct: "5.00",
+  kronosSizingCurve: "linear",
 };
 
 const portfolioState = {
@@ -127,11 +130,11 @@ describe("buildPrompt — Kronos section", () => {
     expect(prompt).toContain("+1%");
   });
 
-  it("includes SELL rule and rebalancePct for predicted return below negative threshold", () => {
+  it("includes SELL rule with trade size hint for ticker below negative threshold", () => {
     const forecasts = [{ ticker: "MSFT", predictedReturnPct: -1.5 }];
 
     const prompt = buildPrompt(
-      { ...basePipeline, kronosRebalancePct: "50.00", kronosMinSignalPct: "1.00" },
+      { ...basePipeline, kronosMinSignalPct: "1.00" },
       ["MSFT"],
       emptyEarningsMap,
       portfolioState,
@@ -140,7 +143,8 @@ describe("buildPrompt — Kronos section", () => {
     );
 
     expect(prompt).toContain("SELL candidates");
-    expect(prompt).toContain("50%");
+    // signal=1.5%: linear t=(1.5-1)/(5-1)=0.125 → round(20+0.125*60)=round(27.5)=28%
+    expect(prompt).toContain("→ trade 28%");
   });
 
   it("includes Kronos section before Instructions section", () => {
@@ -162,14 +166,11 @@ describe("buildPrompt — Kronos section", () => {
     expect(kronosIdx).toBeLessThan(instructionsIdx);
   });
 
-  it("uses default rebalancePct of 50 when kronosRebalancePct is not set", () => {
-    const pipelineWithoutRebalancePct = { ...basePipeline };
-    delete (pipelineWithoutRebalancePct as { kronosRebalancePct?: string }).kronosRebalancePct;
-
+  it("includes sizing curve description and min/max trade sizes", () => {
     const forecasts = [{ ticker: "AAPL", predictedReturnPct: 2.5 }];
 
     const prompt = buildPrompt(
-      pipelineWithoutRebalancePct,
+      basePipeline,
       ["AAPL"],
       emptyEarningsMap,
       portfolioState,
@@ -177,6 +178,8 @@ describe("buildPrompt — Kronos section", () => {
       forecasts
     );
 
-    expect(prompt).toContain("50");
+    expect(prompt).toContain("sizing curve is linear");
+    expect(prompt).toContain("20%");
+    expect(prompt).toContain("80%");
   });
 });
